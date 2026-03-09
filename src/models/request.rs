@@ -40,7 +40,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use super::enums::{MetaToolSlug, TagType};
+use super::enums::{AuthScheme, MetaToolSlug, TagType};
 
 /// Configuration for creating a Tool Router session
 ///
@@ -57,6 +57,7 @@ use super::enums::{MetaToolSlug, TagType};
 /// * `tools` - Optional per-toolkit tool filtering
 /// * `tags` - Optional tag-based tool filtering
 /// * `workbench` - Optional workbench configuration
+/// * `experimental` - Optional experimental features configuration
 ///
 /// # Example
 ///
@@ -77,6 +78,8 @@ use super::enums::{MetaToolSlug, TagType};
 ///     tools: None,
 ///     tags: None,
 ///     workbench: None,
+///     experimental: None,
+///     toolkit_versions: None,
 ///  };
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -96,6 +99,10 @@ pub struct SessionConfig {
     pub tags: Option<TagsConfig>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub workbench: Option<WorkbenchConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub experimental: Option<ExperimentalConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub toolkit_versions: Option<super::versioning::ToolkitVersionParam>,
 }
 
 /// Configuration for connection management
@@ -204,12 +211,97 @@ pub struct WorkbenchConfig {
     pub auto_offload_threshold: Option<u32>,
 }
 
+/// Configuration for assistive prompt generation
+///
+/// Experimental feature for generating timezone-aware assistive prompts.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AssistivePromptConfig {
+    /// IANA timezone identifier (e.g., "America/New_York", "Europe/London")
+    /// for timezone-aware assistive prompts
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_timezone: Option<String>,
+}
+
+/// Experimental configuration for Tool Router sessions
+///
+/// Note: These features are experimental and may be modified or removed in future versions.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExperimentalConfig {
+    /// Configuration for assistive prompt generation
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub assistive_prompt: Option<AssistivePromptConfig>,
+}
+
 /// Request to execute a tool
-#[derive(Debug, Clone, Serialize)]
+///
+/// This struct contains all parameters needed to execute a tool through the Composio API.
+/// It supports various authentication methods and execution modes.
+///
+/// # Fields
+///
+/// * `tool_slug` - The slug of the tool to execute (required)
+/// * `arguments` - Arguments to pass to the tool (optional)
+/// * `connected_account_id` - ID of the connected account to use for authentication (optional)
+/// * `custom_auth_params` - Custom authentication parameters (optional)
+/// * `custom_connection_data` - Custom connection data, takes priority over custom_auth_params (optional)
+/// * `user_id` - User ID to execute the tool for (optional)
+/// * `text` - Natural language text to pass to the tool (optional, mutually exclusive with arguments)
+/// * `version` - Version of the tool to execute (optional, overrides SDK-level toolkit versions)
+/// * `dangerously_skip_version_check` - Skip version check for 'latest' version (optional, dangerous!)
+///
+/// # Example
+///
+/// ```rust
+/// use composio_sdk::models::ToolExecutionRequest;
+/// use serde_json::json;
+///
+/// let request = ToolExecutionRequest {
+///     tool_slug: "GITHUB_CREATE_ISSUE".to_string(),
+///     arguments: Some(json!({
+///         "owner": "composio",
+///         "repo": "composio",
+///         "title": "Test issue"
+///     })),
+///     user_id: Some("user_123".to_string()),
+///     ..Default::default()
+/// };
+/// ```
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct ToolExecutionRequest {
+    /// Tool slug to execute
     pub tool_slug: String,
+    
+    /// Arguments to pass to the tool (mutually exclusive with text)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub arguments: Option<serde_json::Value>,
+    
+    /// Connected account ID to use for authentication
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub connected_account_id: Option<String>,
+    
+    /// Custom authentication parameters
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom_auth_params: Option<serde_json::Value>,
+    
+    /// Custom connection data (takes priority over custom_auth_params)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom_connection_data: Option<serde_json::Value>,
+    
+    /// User ID to execute the tool for
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_id: Option<String>,
+    
+    /// Natural language text to pass to the tool (mutually exclusive with arguments)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
+    
+    /// Version of the tool to execute (overrides SDK-level toolkit versions)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
+    
+    /// Skip version check for 'latest' version (dangerous - may cause unexpected behavior)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dangerously_skip_version_check: Option<bool>,
 }
 
 /// Request to execute a meta tool
@@ -228,6 +320,265 @@ pub struct LinkRequest {
     pub callback_url: Option<String>,
 }
 
+// ============================================================================
+// Auth Config Request Types
+// ============================================================================
+
+/// Parameters for creating an authentication configuration
+///
+/// Auth configs define how users authenticate with external services.
+/// They can use Composio's managed auth or custom OAuth apps.
+///
+/// # Example
+///
+/// ```rust
+/// use composio_sdk::models::{AuthConfigCreateParams, AuthConfigData, AuthScheme};
+/// use serde_json::json;
+///
+/// let params = AuthConfigCreateParams {
+///     toolkit: "github".to_string(),
+///     auth_config: AuthConfigData {
+///         auth_type: AuthScheme::Oauth2,
+///         credentials: json!({
+///             "client_id": "your_client_id",
+///             "client_secret": "your_client_secret",
+///             "scopes": ["repo", "user"]
+///         }),
+///         restrict_to_following_tools: None,
+///     },
+/// };
+/// ```
+#[derive(Debug, Clone, Serialize)]
+pub struct AuthConfigCreateParams {
+    /// Toolkit slug (e.g., "github", "gmail")
+    pub toolkit: String,
+    /// Authentication configuration data
+    pub auth_config: AuthConfigData,
+}
+
+/// Authentication configuration data
+#[derive(Debug, Clone, Serialize)]
+pub struct AuthConfigData {
+    /// Type of authentication scheme
+    #[serde(rename = "type")]
+    pub auth_type: AuthScheme,
+    /// Credentials for the authentication (structure varies by auth_type)
+    pub credentials: serde_json::Value,
+    /// Optional list of tool slugs to restrict this auth config to
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub restrict_to_following_tools: Option<Vec<String>>,
+}
+
+/// Parameters for listing authentication configurations
+///
+/// # Example
+///
+/// ```rust
+/// use composio_sdk::models::AuthConfigListParams;
+///
+/// let params = AuthConfigListParams {
+///     is_composio_managed: Some(false),
+///     toolkit_slug: Some("github".to_string()),
+///     show_disabled: Some(false),
+///     search: None,
+///     limit: Some(20),
+///     cursor: None,
+/// };
+/// ```
+#[derive(Debug, Clone, Serialize, Default)]
+pub struct AuthConfigListParams {
+    /// Filter by Composio-managed auth configs
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_composio_managed: Option<bool>,
+    /// Filter by toolkit slug
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub toolkit_slug: Option<String>,
+    /// Include disabled auth configs
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub show_disabled: Option<bool>,
+    /// Search by name or ID
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub search: Option<String>,
+    /// Maximum number of results to return
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub limit: Option<u32>,
+    /// Pagination cursor
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cursor: Option<String>,
+}
+
+/// Parameters for updating an authentication configuration
+///
+/// # Example
+///
+/// ```rust
+/// use composio_sdk::models::AuthConfigUpdateParams;
+/// use serde_json::json;
+///
+/// let params = AuthConfigUpdateParams {
+///     name: Some("My GitHub App".to_string()),
+///     credentials: Some(json!({
+///         "scopes": ["repo", "user", "admin:org"]
+///     })),
+///     proxy_config: None,
+///     tool_access_config: None,
+/// };
+/// ```
+#[derive(Debug, Clone, Serialize, Default)]
+pub struct AuthConfigUpdateParams {
+    /// New name for the auth config
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Updated credentials
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub credentials: Option<serde_json::Value>,
+    /// Proxy configuration
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub proxy_config: Option<serde_json::Value>,
+    /// Tool access configuration
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_access_config: Option<serde_json::Value>,
+}
+
+// ============================================================================
+// Connected Account Request Types
+// ============================================================================
+
+/// Parameters for creating a connected account
+///
+/// Connected accounts represent user connections to external services.
+///
+/// # Example
+///
+/// ```rust
+/// use composio_sdk::models::{ConnectedAccountCreateParams, AuthConfigReference, ConnectionData};
+///
+/// let params = ConnectedAccountCreateParams {
+///     auth_config: AuthConfigReference {
+///         id: "ac_abc123".to_string(),
+///     },
+///     connection: ConnectionData {
+///         state: None,
+///         data: None,
+///         user_id: "user_123".to_string(),
+///         callback_url: Some("https://myapp.com/callback".to_string()),
+///     },
+///     validate_credentials: Some(true),
+/// };
+/// ```
+#[derive(Debug, Clone, Serialize)]
+pub struct ConnectedAccountCreateParams {
+    /// Reference to the auth config to use
+    pub auth_config: AuthConfigReference,
+    /// Connection data
+    pub connection: ConnectionData,
+    /// Whether to validate credentials immediately
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub validate_credentials: Option<bool>,
+}
+
+/// Reference to an authentication configuration
+#[derive(Debug, Clone, Serialize)]
+pub struct AuthConfigReference {
+    /// Auth config ID
+    pub id: String,
+}
+
+/// Connection data for creating a connected account
+#[derive(Debug, Clone, Serialize)]
+pub struct ConnectionData {
+    /// Connection state (varies by auth scheme)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub state: Option<serde_json::Value>,
+    /// Additional connection data
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<serde_json::Value>,
+    /// User ID this connection belongs to
+    pub user_id: String,
+    /// Callback URL for OAuth flows
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub callback_url: Option<String>,
+}
+
+/// Parameters for listing connected accounts
+///
+/// # Example
+///
+/// ```rust
+/// use composio_sdk::models::ConnectedAccountListParams;
+///
+/// let params = ConnectedAccountListParams {
+///     toolkit_slugs: Some(vec!["github".to_string(), "gmail".to_string()]),
+///     statuses: Some(vec!["ACTIVE".to_string()]),
+///     user_ids: Some(vec!["user_123".to_string()]),
+///     cursor: None,
+///     limit: Some(50),
+///     auth_config_ids: None,
+/// };
+/// ```
+#[derive(Debug, Clone, Serialize, Default)]
+pub struct ConnectedAccountListParams {
+    /// Filter by toolkit slugs
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub toolkit_slugs: Option<Vec<String>>,
+    /// Filter by connection statuses (ACTIVE, EXPIRED, FAILED, etc.)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub statuses: Option<Vec<String>>,
+    /// Pagination cursor
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cursor: Option<String>,
+    /// Maximum number of results to return
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub limit: Option<u32>,
+    /// Filter by user IDs
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_ids: Option<Vec<String>>,
+    /// Filter by auth config IDs
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth_config_ids: Option<Vec<String>>,
+}
+
+// ============================================================================
+// Tool Proxy Request Types
+// ============================================================================
+
+/// Parameters for executing a proxy request
+///
+/// Proxy requests allow you to make authenticated API calls to external services
+/// without predefined tool schemas.
+///
+/// # Example
+///
+/// ```rust
+/// use composio_sdk::models::ToolProxyParams;
+/// use serde_json::json;
+///
+/// let params = ToolProxyParams {
+///     endpoint: "/repos/owner/repo/issues".to_string(),
+///     method: Some("POST".to_string()),
+///     headers: Some(json!({"Accept": "application/vnd.github.v3+json"})),
+///     body: Some(json!({"title": "Bug report", "body": "Description"})),
+///     query_params: None,
+/// };
+/// ```
+#[derive(Debug, Clone, Serialize)]
+pub struct ToolProxyParams {
+    /// API endpoint (relative or absolute URL)
+    pub endpoint: String,
+    /// HTTP method (GET, POST, PUT, DELETE, PATCH, etc.)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub method: Option<String>,
+    /// Custom headers
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub headers: Option<serde_json::Value>,
+    /// Request body
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub body: Option<serde_json::Value>,
+    /// Query parameters
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub query_params: Option<serde_json::Value>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -244,6 +595,8 @@ mod tests {
             tools: None,
             tags: None,
             workbench: None,
+            experimental: None,
+            toolkit_versions: None,
         };
 
         let json = serde_json::to_string(&config).unwrap();
@@ -263,6 +616,8 @@ mod tests {
             tools: None,
             tags: None,
             workbench: None,
+            experimental: None,
+            toolkit_versions: None,
         };
 
         let json = serde_json::to_string(&config).unwrap();
@@ -286,6 +641,8 @@ mod tests {
             tools: None,
             tags: None,
             workbench: None,
+            experimental: None,
+            toolkit_versions: None,
         };
 
         let json = serde_json::to_string(&config).unwrap();
@@ -309,6 +666,8 @@ mod tests {
             tools: None,
             tags: None,
             workbench: None,
+            experimental: None,
+            toolkit_versions: None,
         };
 
         let json = serde_json::to_string(&config).unwrap();
@@ -328,6 +687,8 @@ mod tests {
             tools: None,
             tags: None,
             workbench: None,
+            experimental: None,
+            toolkit_versions: None,
         };
 
         let json = serde_json::to_string(&config).unwrap();
@@ -350,6 +711,8 @@ mod tests {
             tools: None,
             tags: None,
             workbench: None,
+            experimental: None,
+            toolkit_versions: None,
         };
 
         let json = serde_json::to_string(&config).unwrap();
@@ -376,6 +739,8 @@ mod tests {
             tools: Some(ToolsConfig(tools_map)),
             tags: None,
             workbench: None,
+            experimental: None,
+            toolkit_versions: None,
         };
 
         let json = serde_json::to_string(&config).unwrap();
@@ -398,6 +763,8 @@ mod tests {
                 disabled: Some(vec![TagType::DestructiveHint]),
             }),
             workbench: None,
+            experimental: None,
+            toolkit_versions: None,
         };
 
         let json = serde_json::to_string(&config).unwrap();
@@ -421,6 +788,8 @@ mod tests {
                 proxy_execution: Some(true),
                 auto_offload_threshold: Some(1000),
             }),
+            experimental: None,
+            toolkit_versions: None,
         };
 
         let json = serde_json::to_string(&config).unwrap();
@@ -494,6 +863,7 @@ mod tests {
                 "repo": "composio",
                 "title": "Test issue"
             })),
+            ..Default::default()
         };
 
         let json = serde_json::to_string(&request).unwrap();
@@ -509,6 +879,7 @@ mod tests {
         let request = ToolExecutionRequest {
             tool_slug: "GITHUB_GET_USER".to_string(),
             arguments: None,
+            ..Default::default()
         };
 
         let json = serde_json::to_string(&request).unwrap();

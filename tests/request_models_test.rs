@@ -22,7 +22,9 @@ fn test_session_config_minimal() {
         tools: None,
         tags: None,
         workbench: None,
-    };
+    
+            toolkit_versions: None,
+        };
 
     let json = serde_json::to_value(&config).unwrap();
     assert_eq!(json["user_id"], "user_123");
@@ -45,7 +47,9 @@ fn test_session_config_with_enabled_toolkits() {
         tools: None,
         tags: None,
         workbench: None,
-    };
+    
+            toolkit_versions: None,
+        };
 
     let json = serde_json::to_value(&config).unwrap();
     assert_eq!(json["user_id"], "user_123");
@@ -92,7 +96,9 @@ fn test_session_config_with_auth_configs() {
         tools: None,
         tags: None,
         workbench: None,
-    };
+    
+            toolkit_versions: None,
+        };
 
     let json = serde_json::to_value(&config).unwrap();
     assert_eq!(json["auth_configs"]["github"], "ac_github_123");
@@ -113,7 +119,9 @@ fn test_session_config_with_connected_accounts() {
         tools: None,
         tags: None,
         workbench: None,
-    };
+    
+            toolkit_versions: None,
+        };
 
     let json = serde_json::to_value(&config).unwrap();
     assert_eq!(json["connected_accounts"]["gmail"], "ca_work_gmail");
@@ -130,7 +138,9 @@ fn test_session_config_with_manage_connections() {
         tools: None,
         tags: None,
         workbench: None,
-    };
+    
+            toolkit_versions: None,
+        };
 
     let json = serde_json::to_value(&config).unwrap();
     assert_eq!(json["manage_connections"], true);
@@ -378,6 +388,7 @@ fn test_session_config_complete() {
             proxy_execution: Some(true),
             auto_offload_threshold: Some(20000),
         }),
+        toolkit_versions: None,
     };
 
     let json = serde_json::to_value(&config).unwrap();

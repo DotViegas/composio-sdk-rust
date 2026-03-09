@@ -25,3 +25,8 @@ Thumbs.db
 # Test artifacts
 *.profraw
 *.profdata
+
+temp
+temp/*
+
+.kiro

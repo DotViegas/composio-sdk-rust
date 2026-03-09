@@ -36,18 +36,30 @@ pub enum TagType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum AuthScheme {
-    /// OAuth 2.0 authentication
-    Oauth2,
     /// OAuth 1.0 authentication
     Oauth1,
+    /// OAuth 2.0 authentication
+    Oauth2,
     /// API key authentication
     ApiKey,
     /// Bearer token authentication
     BearerToken,
     /// HTTP Basic authentication
     Basic,
-    /// Custom authentication scheme
-    Custom,
+    /// No authentication required
+    NoAuth,
+    /// Snowflake authentication
+    Snowflake,
+    /// Cal.com authentication
+    CalcomAuth,
+    /// Bill.com authentication
+    BillcomAuth,
+    /// Composio Link authentication
+    ComposioLink,
+    /// Basic authentication with JWT
+    BasicWithJwt,
+    /// Google Service Account authentication
+    GoogleServiceAccount,
 }
 
 #[cfg(test)]
@@ -161,9 +173,33 @@ mod tests {
         let json = serde_json::to_string(&scheme).unwrap();
         assert_eq!(json, "\"BASIC\"");
 
-        let scheme = AuthScheme::Custom;
+        let scheme = AuthScheme::NoAuth;
         let json = serde_json::to_string(&scheme).unwrap();
-        assert_eq!(json, "\"CUSTOM\"");
+        assert_eq!(json, "\"NO_AUTH\"");
+
+        let scheme = AuthScheme::Snowflake;
+        let json = serde_json::to_string(&scheme).unwrap();
+        assert_eq!(json, "\"SNOWFLAKE\"");
+
+        let scheme = AuthScheme::CalcomAuth;
+        let json = serde_json::to_string(&scheme).unwrap();
+        assert_eq!(json, "\"CALCOM_AUTH\"");
+
+        let scheme = AuthScheme::BillcomAuth;
+        let json = serde_json::to_string(&scheme).unwrap();
+        assert_eq!(json, "\"BILLCOM_AUTH\"");
+
+        let scheme = AuthScheme::ComposioLink;
+        let json = serde_json::to_string(&scheme).unwrap();
+        assert_eq!(json, "\"COMPOSIO_LINK\"");
+
+        let scheme = AuthScheme::BasicWithJwt;
+        let json = serde_json::to_string(&scheme).unwrap();
+        assert_eq!(json, "\"BASIC_WITH_JWT\"");
+
+        let scheme = AuthScheme::GoogleServiceAccount;
+        let json = serde_json::to_string(&scheme).unwrap();
+        assert_eq!(json, "\"GOOGLE_SERVICE_ACCOUNT\"");
     }
 
     #[test]
@@ -188,9 +224,33 @@ mod tests {
         let scheme: AuthScheme = serde_json::from_str(json).unwrap();
         assert!(matches!(scheme, AuthScheme::Basic));
 
-        let json = "\"CUSTOM\"";
+        let json = "\"NO_AUTH\"";
         let scheme: AuthScheme = serde_json::from_str(json).unwrap();
-        assert!(matches!(scheme, AuthScheme::Custom));
+        assert!(matches!(scheme, AuthScheme::NoAuth));
+
+        let json = "\"SNOWFLAKE\"";
+        let scheme: AuthScheme = serde_json::from_str(json).unwrap();
+        assert!(matches!(scheme, AuthScheme::Snowflake));
+
+        let json = "\"CALCOM_AUTH\"";
+        let scheme: AuthScheme = serde_json::from_str(json).unwrap();
+        assert!(matches!(scheme, AuthScheme::CalcomAuth));
+
+        let json = "\"BILLCOM_AUTH\"";
+        let scheme: AuthScheme = serde_json::from_str(json).unwrap();
+        assert!(matches!(scheme, AuthScheme::BillcomAuth));
+
+        let json = "\"COMPOSIO_LINK\"";
+        let scheme: AuthScheme = serde_json::from_str(json).unwrap();
+        assert!(matches!(scheme, AuthScheme::ComposioLink));
+
+        let json = "\"BASIC_WITH_JWT\"";
+        let scheme: AuthScheme = serde_json::from_str(json).unwrap();
+        assert!(matches!(scheme, AuthScheme::BasicWithJwt));
+
+        let json = "\"GOOGLE_SERVICE_ACCOUNT\"";
+        let scheme: AuthScheme = serde_json::from_str(json).unwrap();
+        assert!(matches!(scheme, AuthScheme::GoogleServiceAccount));
     }
 
     #[test]

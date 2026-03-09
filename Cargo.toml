@@ -1,6 +1,6 @@
 [package]
 name = "composio-sdk"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 authors = ["DotViegas <https://github.com/DotViegas>"]
 description = "Minimal Rust SDK for Composio Tool Router REST API"
@@ -32,8 +32,20 @@ serde_yaml = "0.9"
 tokio = { version = "1.0", features = ["full"] }
 tokio-retry = "0.3"
 thiserror = "1.0"
+async-trait = "0.1"
 tracing = { version = "0.1", optional = true }
 tracing-subscriber = { version = "0.3", optional = true }
+md5 = "0.7"
+mime = "0.3"
+mime_guess = "2.0"
+url = "2.5"
+urlencoding = "2.1"
+chrono = "0.4"
+uuid = { version = "1.0", features = ["v4"] }
+dirs = "5.0"
+hmac = "0.12"
+sha2 = "0.10"
+base64 = "0.21"
 
 [dev-dependencies]
 wiremock = "0.5"

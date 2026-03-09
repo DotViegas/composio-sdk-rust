@@ -1,7 +1,9 @@
 //! Configuration for Composio SDK
 
 use crate::error::ComposioError;
+use crate::models::versioning::ToolkitVersionParam;
 use crate::retry::RetryPolicy;
+use std::path::PathBuf;
 use std::time::Duration;
 
 /// Configuration for Composio client
@@ -15,6 +17,14 @@ pub struct ComposioConfig {
     pub timeout: Duration,
     /// Retry policy for handling transient failures
     pub retry_policy: RetryPolicy,
+    /// Toolkit version configuration (default: None, uses "latest")
+    pub toolkit_versions: Option<ToolkitVersionParam>,
+    /// Directory for downloading files (optional)
+    pub file_download_dir: Option<PathBuf>,
+    /// Whether to automatically upload and download files (default: true)
+    pub auto_upload_download_files: bool,
+    /// Whether to enable telemetry tracking (opt-in, default: false for privacy)
+    pub telemetry_enabled: bool,
 }
 
 impl ComposioConfig {
@@ -45,6 +55,10 @@ impl ComposioConfig {
             base_url: "https://backend.composio.dev/api/v3".to_string(),
             timeout: Duration::from_secs(30),
             retry_policy: RetryPolicy::default(),
+            toolkit_versions: None,
+            file_download_dir: None,
+            auto_upload_download_files: true,
+            telemetry_enabled: false, // Opt-in for privacy
         }
     }
 

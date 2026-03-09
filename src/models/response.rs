@@ -14,6 +14,8 @@ pub struct SessionResponse {
     pub config: SessionConfig,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub assistive_prompt: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub toolkit_versions: Option<super::versioning::ToolkitVersionParam>,
 }
 
 /// MCP server information
@@ -45,11 +47,65 @@ pub struct ToolSchema {
 }
 
 /// Response from tool execution
+///
+/// Contains the result of a tool execution, including data, error information,
+/// and execution metadata.
+///
+/// # Fields
+///
+/// * `data` - The execution result data
+/// * `error` - Error message if execution failed
+/// * `log_id` - Log ID for debugging and tracing
+/// * `successful` - Whether the execution was successful (derived from error field)
+///
+/// # Example
+///
+/// ```rust
+/// use composio_sdk::models::ToolExecutionResponse;
+///
+/// # fn example(response: ToolExecutionResponse) {
+/// if response.is_successful() {
+///     println!("Success: {:?}", response.data);
+/// } else {
+///     eprintln!("Error: {}", response.error.unwrap());
+/// }
+/// # }
+/// ```
 #[derive(Debug, Clone, Deserialize)]
 pub struct ToolExecutionResponse {
+    /// Execution result data
     pub data: serde_json::Value,
+    
+    /// Error message if execution failed
     pub error: Option<String>,
+    
+    /// Log ID for debugging and tracing
     pub log_id: String,
+    
+    /// Whether the execution was successful
+    /// This field is computed from the error field during deserialization
+    #[serde(default)]
+    pub successful: bool,
+}
+
+impl ToolExecutionResponse {
+    /// Check if the execution was successful
+    ///
+    /// Returns `true` if there is no error, `false` otherwise.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use composio_sdk::models::ToolExecutionResponse;
+    /// # fn example(response: ToolExecutionResponse) {
+    /// if response.is_successful() {
+    ///     println!("Tool executed successfully!");
+    /// }
+    /// # }
+    /// ```
+    pub fn is_successful(&self) -> bool {
+        self.error.is_none()
+    }
 }
 
 /// Response from meta tool execution
@@ -108,6 +164,114 @@ pub struct LinkResponse {
     pub connected_account_id: Option<String>,
 }
 
+// ============================================================================
+// Tool Router Session Response Types
+// ============================================================================
+
+/// MCP server type for Tool Router sessions
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ToolRouterMcpServerType {
+    /// HTTP-based MCP server
+    Http,
+    /// Server-Sent Events (SSE) based MCP server
+    Sse,
+}
+
+/// MCP server configuration for Tool Router sessions
+///
+/// Contains the connection details for accessing the MCP server
+/// associated with a Tool Router session.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ToolRouterMcpServerConfig {
+    /// Type of MCP server (HTTP or SSE)
+    #[serde(rename = "type")]
+    pub server_type: ToolRouterMcpServerType,
+    /// MCP server URL
+    pub url: String,
+    /// Optional authentication headers (includes x-api-key)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub headers: Option<std::collections::HashMap<String, Option<String>>>,
+}
+
+/// Experimental features in Tool Router session response
+///
+/// Note: These features are experimental and may be modified or removed in future versions.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ToolRouterSessionExperimental {
+    /// Generated assistive system prompt based on experimental config
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub assistive_prompt: Option<String>,
+}
+
+/// Auth config information for a toolkit connection
+#[derive(Debug, Clone, Deserialize)]
+pub struct ToolkitConnectionAuthConfig {
+    /// Auth config ID
+    pub id: String,
+    /// Authentication scheme/mode
+    pub mode: String,
+    /// Whether this auth config is managed by Composio
+    pub is_composio_managed: bool,
+}
+
+/// Connected account information for a toolkit
+#[derive(Debug, Clone, Deserialize)]
+pub struct ToolkitConnectedAccount {
+    /// Connected account ID
+    pub id: String,
+    /// Connection status (ACTIVE, EXPIRED, FAILED, etc.)
+    pub status: String,
+}
+
+/// Connection information for a toolkit
+#[derive(Debug, Clone, Deserialize)]
+pub struct ToolkitConnection {
+    /// Whether the connection is active
+    pub is_active: bool,
+    /// Auth config information (None for no-auth toolkits)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth_config: Option<ToolkitConnectionAuthConfig>,
+    /// Connected account information (None if not connected)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub connected_account: Option<ToolkitConnectedAccount>,
+}
+
+/// Connection state of a toolkit in a Tool Router session
+///
+/// Provides detailed information about a toolkit's availability,
+/// authentication status, and connection details.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ToolkitConnectionState {
+    /// Toolkit slug (e.g., "github", "gmail")
+    pub slug: String,
+    /// Human-readable toolkit name
+    pub name: String,
+    /// Whether this toolkit requires no authentication
+    pub is_no_auth: bool,
+    /// Connection information (None for no-auth toolkits)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub connection: Option<ToolkitConnection>,
+    /// Toolkit logo URL
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub logo: Option<String>,
+}
+
+/// Details of toolkit connections in a Tool Router session
+///
+/// Contains a paginated list of toolkit connection states with
+/// information about authentication and connection status.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ToolkitConnectionsDetails {
+    /// List of toolkit connection states
+    pub items: Vec<ToolkitConnectionState>,
+    /// Total number of pages available
+    pub total_pages: u32,
+    /// Cursor for fetching the next page (None if no more pages)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_cursor: Option<String>,
+}
+
 /// Error response from API
 #[derive(Debug, Clone, Deserialize)]
 pub struct ErrorResponse {
@@ -118,6 +282,222 @@ pub struct ErrorResponse {
     pub request_id: Option<String>,
     pub suggested_fix: Option<String>,
     pub errors: Option<Vec<crate::error::ErrorDetail>>,
+}
+
+// ============================================================================
+// Auth Config Response Types
+// ============================================================================
+
+/// Response from creating an authentication configuration
+#[derive(Debug, Clone, Deserialize)]
+pub struct AuthConfigCreateResponse {
+    /// Toolkit information
+    pub toolkit: ToolkitInfo,
+    /// Created auth config information
+    pub auth_config: AuthConfigInfo,
+}
+
+/// Response from listing authentication configurations
+#[derive(Debug, Clone, Deserialize)]
+pub struct AuthConfigListResponse {
+    /// List of auth configs
+    pub items: Vec<AuthConfigDetail>,
+    /// Pagination cursor for next page
+    pub next_cursor: Option<String>,
+    /// Total number of pages
+    pub total_pages: u32,
+    /// Current page number
+    pub current_page: u32,
+    /// Total number of items
+    pub total_items: u32,
+}
+
+/// Response from retrieving a single authentication configuration
+#[derive(Debug, Clone, Deserialize)]
+pub struct AuthConfigRetrieveResponse {
+    /// Auth config ID (nano ID)
+    pub id: String,
+    /// Auth config UUID (deprecated, use id)
+    pub uuid: String,
+    /// Type of auth config
+    #[serde(rename = "type")]
+    pub config_type: String,
+    /// Toolkit slug
+    pub toolkit: String,
+    /// Auth config name
+    pub name: String,
+    /// Authentication scheme
+    pub auth_scheme: AuthScheme,
+    /// Credentials (may be masked)
+    pub credentials: serde_json::Value,
+    /// Status (ENABLED, DISABLED)
+    pub status: String,
+    /// Creation timestamp
+    pub created_at: String,
+    /// Number of connected accounts using this auth config
+    pub no_of_connections: u32,
+    /// Tool access configuration
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_access_config: Option<serde_json::Value>,
+}
+
+/// Detailed auth config information
+#[derive(Debug, Clone, Deserialize)]
+pub struct AuthConfigDetail {
+    /// Auth config ID (nano ID)
+    pub id: String,
+    /// Auth config UUID (deprecated)
+    pub uuid: String,
+    /// Type of auth config
+    #[serde(rename = "type")]
+    pub config_type: String,
+    /// Toolkit slug
+    pub toolkit: String,
+    /// Auth config name
+    pub name: String,
+    /// Authentication scheme
+    pub auth_scheme: AuthScheme,
+    /// Credentials (may be masked)
+    pub credentials: serde_json::Value,
+    /// Status (ENABLED, DISABLED)
+    pub status: String,
+    /// Creation timestamp
+    pub created_at: String,
+    /// Number of connected accounts
+    pub no_of_connections: u32,
+    /// Tool access configuration
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_access_config: Option<serde_json::Value>,
+}
+
+/// Information about an authentication configuration
+#[derive(Debug, Clone, Deserialize)]
+pub struct AuthConfigInfo {
+    /// Auth config ID
+    pub id: String,
+    /// Authentication scheme
+    pub auth_scheme: AuthScheme,
+    /// Whether this is managed by Composio
+    pub is_composio_managed: bool,
+    /// Optional list of tools this auth config is restricted to
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub restrict_to_following_tools: Option<Vec<String>>,
+}
+
+// ============================================================================
+// Connected Account Response Types
+// ============================================================================
+
+/// Response from creating a connected account
+#[derive(Debug, Clone, Deserialize)]
+pub struct ConnectedAccountCreateResponse {
+    /// Connected account ID
+    pub id: String,
+    /// Connection data (varies by auth scheme)
+    pub connection_data: serde_json::Value,
+    /// Connection status
+    pub status: String,
+    /// Redirect URL for OAuth flows
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub redirect_url: Option<String>,
+}
+
+/// Response from listing connected accounts
+#[derive(Debug, Clone, Deserialize)]
+pub struct ConnectedAccountListResponse {
+    /// List of connected accounts
+    pub items: Vec<ConnectedAccountDetail>,
+    /// Pagination cursor for next page
+    pub next_cursor: Option<String>,
+    /// Total number of pages
+    pub total_pages: u32,
+    /// Current page number
+    pub current_page: u32,
+    /// Total number of items
+    pub total_items: u32,
+}
+
+/// Detailed information about a connected account
+#[derive(Debug, Clone, Deserialize)]
+pub struct ConnectedAccountDetail {
+    /// Toolkit slug
+    pub toolkit: String,
+    /// Auth config ID
+    pub auth_config: String,
+    /// Connected account ID
+    pub id: String,
+    /// User ID
+    pub user_id: String,
+    /// Connection status (ACTIVE, EXPIRED, FAILED, etc.)
+    pub status: String,
+    /// Creation timestamp
+    pub created_at: String,
+    /// Last update timestamp
+    pub updated_at: String,
+    /// Connection state
+    pub state: serde_json::Value,
+    /// Additional connection data
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<serde_json::Value>,
+    /// Status reason (if failed or expired)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status_reason: Option<String>,
+    /// Whether the account is disabled
+    pub is_disabled: bool,
+}
+
+/// Response from retrieving a single connected account
+pub type ConnectedAccountRetrieveResponse = ConnectedAccountDetail;
+
+/// Response from updating connected account status
+#[derive(Debug, Clone, Deserialize)]
+pub struct ConnectedAccountUpdateStatusResponse {
+    /// Whether the operation was successful
+    pub success: bool,
+}
+
+// ============================================================================
+// Tool Proxy Response Types
+// ============================================================================
+
+/// Response from a proxy request
+#[derive(Debug, Clone, Deserialize)]
+pub struct ToolProxyResponse {
+    /// Response data from the external API
+    pub data: serde_json::Value,
+    /// HTTP status code
+    pub status: u16,
+    /// Response headers
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub headers: Option<serde_json::Value>,
+    /// Error message if request failed
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
+// ============================================================================
+// Trigger Response Types
+// ============================================================================
+
+/// Response from creating or updating a trigger instance
+#[derive(Debug, Clone, Deserialize)]
+pub struct TriggerInstanceUpsertResponse {
+    /// Trigger instance ID
+    pub id: String,
+    /// Trigger name/slug
+    pub trigger_name: String,
+    /// Connected account ID
+    pub connected_account_id: String,
+    /// User ID
+    pub user_id: String,
+    /// Trigger configuration
+    pub trigger_config: serde_json::Value,
+    /// Trigger state
+    pub state: String,
+    /// Creation timestamp
+    pub created_at: String,
+    /// Last update timestamp
+    pub updated_at: String,
 }
 
 #[cfg(test)]

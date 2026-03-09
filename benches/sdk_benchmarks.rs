@@ -366,7 +366,9 @@ fn bench_json_operations(c: &mut Criterion) {
         tools: None,
         tags: None,
         workbench: None,
-    };
+    
+            toolkit_versions: None,
+        };
     
     c.bench_function("json_serialize_session_config", |b| {
         b.iter(|| {

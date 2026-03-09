@@ -7,14 +7,37 @@ use crate::models::request::{
 };
 use crate::models::response::ToolSchema;
 use crate::models::enums::TagType;
+use crate::models::versioning::ToolkitVersionParam;
 use std::collections::HashMap;
 use std::sync::Arc;
+
+/// Extract toolkit slug from tool slug
+///
+/// Tool slugs follow the pattern `{TOOLKIT}_{ACTION}`, where the toolkit
+/// is the first part before the underscore. This function extracts and
+/// lowercases the toolkit slug.
+///
+/// # Examples
+///
+/// ```
+/// # use composio_sdk::session::extract_toolkit_from_slug;
+/// assert_eq!(extract_toolkit_from_slug("GITHUB_CREATE_ISSUE"), "github");
+/// assert_eq!(extract_toolkit_from_slug("GMAIL_SEND_EMAIL"), "gmail");
+/// assert_eq!(extract_toolkit_from_slug("COMPOSIO_SEARCH_TOOLS"), "composio");
+/// ```
+pub fn extract_toolkit_from_slug(tool_slug: &str) -> String {
+    tool_slug
+        .split('_')
+        .next()
+        .unwrap_or(tool_slug)
+        .to_lowercase()
+}
 
 /// Represents a Tool Router session
 ///
 /// A session provides scoped access to tools and toolkits for a specific user.
 /// It maintains a reference to the client for making API calls and stores
-/// session metadata including available tools.
+/// session metadata including available tools and toolkit version configuration.
 ///
 /// # Example
 ///
@@ -48,6 +71,8 @@ pub struct Session {
     mcp_url: String,
     /// List of available tool slugs in this session
     tools: Vec<String>,
+    /// Toolkit version configuration for this session
+    toolkit_versions: Option<ToolkitVersionParam>,
 }
 
 impl Session {
@@ -119,7 +144,8 @@ impl Session {
     /// Create a Session from a SessionResponse
     ///
     /// Internal method used to construct a Session from an API response.
-    /// This is used by both session creation and retrieval.
+    /// This is used by both session creation and retrieval. The session
+    /// inherits the toolkit version configuration from the client.
     ///
     /// # Arguments
     ///
@@ -130,6 +156,7 @@ impl Session {
         response: crate::models::response::SessionResponse,
     ) -> Self {
         Self {
+            toolkit_versions: client.config().toolkit_versions.clone(),
             client: Arc::new(client),
             session_id: response.session_id,
             mcp_url: response.mcp.url,
@@ -210,18 +237,31 @@ impl Session {
         use crate::models::request::ToolExecutionRequest;
         use crate::models::response::ToolExecutionResponse;
         use crate::retry::with_retry;
+        use crate::utils::toolkit_version::get_toolkit_version;
 
         let tool_slug = tool_slug.into();
+        
+        // Extract toolkit from slug (e.g., "GITHUB_CREATE_ISSUE" -> "github")
+        let toolkit = extract_toolkit_from_slug(&tool_slug);
+        
+        // Resolve version using precedence: env var > config > default
+        let version = get_toolkit_version(
+            &toolkit,
+            self.toolkit_versions.as_ref()
+        );
+        
         let url = format!(
             "{}/tool_router/session/{}/execute",
             self.client.config().base_url,
             self.session_id
         );
 
-        // Create request body
+        // Create request body with resolved version
         let request_body = ToolExecutionRequest {
             tool_slug: tool_slug.clone(),
             arguments: Some(arguments),
+            version: Some(version.as_str().to_string()),
+            ..Default::default()
         };
 
         let policy = &self.client.config().retry_policy;
@@ -534,6 +574,110 @@ impl Session {
         Ok(tools)
     }
 
+    /// Get meta tools formatted for a specific provider
+    ///
+    /// This method retrieves meta tools and converts them to the format expected
+    /// by a specific AI framework (OpenAI, Anthropic, etc.) using the provider system.
+    ///
+    /// # Type Parameters
+    ///
+    /// * `P` - The provider type that implements the `Provider` trait
+    ///
+    /// # Arguments
+    ///
+    /// * `provider` - The provider instance to use for conversion
+    ///
+    /// # Returns
+    ///
+    /// Returns the provider's tool collection type (e.g., `Vec<ChatCompletionToolParam>` for OpenAI)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Network error occurs
+    /// - API returns an error response
+    /// - Response cannot be parsed
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use composio_sdk::{ComposioClient, providers::OpenAIProvider};
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = ComposioClient::builder()
+    ///     .api_key("your-api-key")
+    ///     .build()?;
+    ///
+    /// let session = client
+    ///     .create_session("user_123")
+    ///     .toolkits(vec!["github"])
+    ///     .send()
+    ///     .await?;
+    ///
+    /// // Get tools in OpenAI format
+    /// let provider = OpenAIProvider::new();
+    /// let openai_tools = session.get_provider_tools(&provider).await?;
+    ///
+    /// // Use with OpenAI API
+    /// // let response = openai_client.chat().completions().create(
+    /// //     ChatCompletionRequest {
+    /// //         model: "gpt-4",
+    /// //         messages: vec![...],
+    /// //         tools: Some(openai_tools),
+    /// //         ...
+    /// //     }
+    /// // ).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Example with Anthropic
+    ///
+    /// ```no_run
+    /// use composio_sdk::{ComposioClient, providers::AnthropicProvider};
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = ComposioClient::builder()
+    ///     .api_key("your-api-key")
+    ///     .build()?;
+    ///
+    /// let session = client
+    ///     .create_session("user_123")
+    ///     .send()
+    ///     .await?;
+    ///
+    /// // Get tools in Anthropic format
+    /// let provider = AnthropicProvider::new();
+    /// let anthropic_tools = session.get_provider_tools(&provider).await?;
+    ///
+    /// // Use with Anthropic API
+    /// // let response = anthropic_client.messages().create(
+    /// //     MessageRequest {
+    /// //         model: "claude-3-5-sonnet-20241022",
+    /// //         messages: vec![...],
+    /// //         tools: Some(anthropic_tools),
+    /// //         ...
+    /// //     }
+    /// // ).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn get_provider_tools<P>(
+        &self,
+        provider: &P,
+    ) -> Result<P::ToolCollection, ComposioError>
+    where
+        P: crate::providers::Provider,
+    {
+        // 1. Get meta tools from API (universal format)
+        let schemas = self.get_meta_tools().await?;
+
+        // 2. Convert using provider
+        let tools = provider.wrap_tools(schemas);
+
+        Ok(tools)
+    }
+
     /// Create an authentication link for a toolkit
     ///
     /// Generates a Connect Link URL that users can visit to authenticate with
@@ -683,6 +827,9 @@ pub struct SessionBuilder<'a> {
 impl<'a> SessionBuilder<'a> {
     /// Create a new session builder
     ///
+    /// The builder inherits the toolkit version configuration from the client.
+    /// You can override this configuration using the `.toolkit_versions()` method.
+    ///
     /// # Arguments
     ///
     /// * `client` - Reference to the ComposioClient
@@ -700,6 +847,8 @@ impl<'a> SessionBuilder<'a> {
                 tools: None,
                 tags: None,
                 workbench: None,
+                experimental: None,
+                toolkit_versions: client.config().toolkit_versions.clone(),
             },
         }
     }
@@ -974,6 +1123,72 @@ impl<'a> SessionBuilder<'a> {
         self
     }
 
+    /// Override toolkit version configuration for this session
+    ///
+    /// By default, sessions inherit the toolkit version configuration from the client.
+    /// Use this method to override the configuration for a specific session.
+    ///
+    /// # Arguments
+    ///
+    /// * `versions` - Toolkit version configuration
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # use composio_sdk::ComposioClient;
+    /// # use composio_sdk::models::versioning::{ToolkitVersion, ToolkitVersionParam};
+    /// # use std::collections::HashMap;
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = ComposioClient::builder().api_key("key").build()?;
+    /// // Override client config for this session
+    /// let mut versions = HashMap::new();
+    /// versions.insert("github".to_string(), ToolkitVersion::Specific("20250906_01".to_string()));
+    ///
+    /// let session = client
+    ///     .create_session("user_123")
+    ///     .toolkit_versions(ToolkitVersionParam::Versions(versions))
+    ///     .send()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn toolkit_versions(mut self, versions: ToolkitVersionParam) -> Self {
+        self.config.toolkit_versions = Some(versions);
+        self
+    }
+
+    /// Configure experimental features for this session
+    ///
+    /// Note: These features are experimental and may be modified or removed in future versions.
+    ///
+    /// # Arguments
+    ///
+    /// * `user_timezone` - IANA timezone identifier (e.g., "America/New_York", "Europe/London")
+    ///                     for timezone-aware assistive prompts
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # use composio_sdk::ComposioClient;
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = ComposioClient::builder().api_key("key").build()?;
+    /// let session = client
+    ///     .create_session("user_123")
+    ///     .experimental(Some("America/New_York".to_string()))
+    ///     .send()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn experimental(mut self, user_timezone: Option<String>) -> Self {
+        use crate::models::request::{AssistivePromptConfig, ExperimentalConfig};
+        
+        self.config.experimental = Some(ExperimentalConfig {
+            assistive_prompt: Some(AssistivePromptConfig { user_timezone }),
+        });
+        self
+    }
+
     /// Send the session creation request
     ///
     /// This consumes the builder and creates the session on the Composio API.
@@ -1041,6 +1256,7 @@ impl<'a> SessionBuilder<'a> {
 
         // Create Session struct with Arc-wrapped client
         Ok(Session {
+            toolkit_versions: session_response.toolkit_versions.or(self.config.toolkit_versions.clone()),
             client: Arc::new(self.client.clone()),
             session_id: session_response.session_id,
             mcp_url: session_response.mcp.url,
@@ -1623,6 +1839,14 @@ mod tests {
     }
 
     #[test]
+    fn test_extract_toolkit_from_slug() {
+        assert_eq!(extract_toolkit_from_slug("GITHUB_CREATE_ISSUE"), "github");
+        assert_eq!(extract_toolkit_from_slug("GMAIL_SEND_EMAIL"), "gmail");
+        assert_eq!(extract_toolkit_from_slug("COMPOSIO_SEARCH_TOOLS"), "composio");
+        assert_eq!(extract_toolkit_from_slug("SLACK_SEND_MESSAGE"), "slack");
+    }
+
+    #[test]
     fn test_session_session_id_accessor() {
         let client = Arc::new(create_test_client());
         let session = Session {
@@ -1630,6 +1854,8 @@ mod tests {
             session_id: "sess_123".to_string(),
             mcp_url: "https://mcp.composio.dev".to_string(),
             tools: vec!["COMPOSIO_SEARCH_TOOLS".to_string()],
+        
+            toolkit_versions: None,
         };
 
         assert_eq!(session.session_id(), "sess_123");
@@ -1643,6 +1869,8 @@ mod tests {
             session_id: "sess_123".to_string(),
             mcp_url: "https://mcp.composio.dev".to_string(),
             tools: vec!["COMPOSIO_SEARCH_TOOLS".to_string()],
+        
+            toolkit_versions: None,
         };
 
         assert_eq!(session.mcp_url(), "https://mcp.composio.dev");
@@ -1660,6 +1888,7 @@ mod tests {
             session_id: "sess_123".to_string(),
             mcp_url: "https://mcp.composio.dev".to_string(),
             tools: tools.clone(),
+            toolkit_versions: None,
         };
 
         assert_eq!(session.tools(), &tools);
@@ -1674,6 +1903,8 @@ mod tests {
             session_id: "sess_123".to_string(),
             mcp_url: "https://mcp.composio.dev".to_string(),
             tools: vec![],
+        
+            toolkit_versions: None,
         };
 
         let builder = ToolkitListBuilder::new(&session);
@@ -1692,6 +1923,8 @@ mod tests {
             session_id: "sess_123".to_string(),
             mcp_url: "https://mcp.composio.dev".to_string(),
             tools: vec![],
+        
+            toolkit_versions: None,
         };
 
         let builder = session.list_toolkits().limit(50);
@@ -1706,6 +1939,8 @@ mod tests {
             session_id: "sess_123".to_string(),
             mcp_url: "https://mcp.composio.dev".to_string(),
             tools: vec![],
+        
+            toolkit_versions: None,
         };
 
         let builder = session.list_toolkits().cursor("cursor_abc");
@@ -1720,6 +1955,8 @@ mod tests {
             session_id: "sess_123".to_string(),
             mcp_url: "https://mcp.composio.dev".to_string(),
             tools: vec![],
+        
+            toolkit_versions: None,
         };
 
         let builder = session.list_toolkits().toolkits(vec!["github", "gmail"]);
@@ -1737,6 +1974,8 @@ mod tests {
             session_id: "sess_123".to_string(),
             mcp_url: "https://mcp.composio.dev".to_string(),
             tools: vec![],
+        
+            toolkit_versions: None,
         };
 
         let builder = session.list_toolkits().is_connected(true);
@@ -1751,6 +1990,8 @@ mod tests {
             session_id: "sess_123".to_string(),
             mcp_url: "https://mcp.composio.dev".to_string(),
             tools: vec![],
+        
+            toolkit_versions: None,
         };
 
         let builder = session.list_toolkits().search("communication");
@@ -1765,6 +2006,8 @@ mod tests {
             session_id: "sess_123".to_string(),
             mcp_url: "https://mcp.composio.dev".to_string(),
             tools: vec![],
+        
+            toolkit_versions: None,
         };
 
         let builder = session.list_toolkits()

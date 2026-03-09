@@ -15,7 +15,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         tools: None,
         tags: None,
         workbench: None,
-    };
+    
+            toolkit_versions: None,
+        };
 
     println!("Test 1: Enable list");
     println!("{}", serde_json::to_string_pretty(&config1)?);
@@ -31,7 +33,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         tools: None,
         tags: None,
         workbench: None,
-    };
+    
+            toolkit_versions: None,
+        };
 
     println!("Test 2: Without toolkits");
     println!("{}", serde_json::to_string_pretty(&config2)?);

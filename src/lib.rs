@@ -166,6 +166,35 @@ pub mod skills_integration;
 /// Meta tools - Native Rust implementations
 pub mod meta_tools;
 
+/// Utility functions for the SDK
+pub mod utils;
+
+/// Provider system for framework-specific tool formatting
+pub mod providers;
+
+// ============================================================================
+// SDK Metadata
+// ============================================================================
+
+/// SDK version from Cargo.toml
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// SDK name
+pub const NAME: &str = env!("CARGO_PKG_NAME");
+
+/// Get SDK version information
+///
+/// # Examples
+///
+/// ```rust
+/// use composio_sdk;
+///
+/// println!("Using Composio SDK v{}", composio_sdk::VERSION);
+/// ```
+pub fn version() -> &'static str {
+    VERSION
+}
+
 // ============================================================================
 // Core Client and Configuration
 // ============================================================================
@@ -178,6 +207,37 @@ pub use client::ComposioClientBuilder;
 
 /// Configuration for the Composio SDK
 pub use config::ComposioConfig;
+
+// ============================================================================
+// Provider System
+// ============================================================================
+
+/// Provider trait for framework-specific tool formatting
+///
+/// See the [`providers`] module documentation for detailed usage examples.
+pub use providers::Provider;
+
+/// OpenAI provider for Chat Completions API
+pub use providers::OpenAIProvider;
+
+/// Anthropic provider for Claude API
+pub use providers::AnthropicProvider;
+
+// ============================================================================
+// Logging Utilities
+// ============================================================================
+
+/// Logging utilities for the SDK
+///
+/// This module provides logging configuration with verbosity control,
+/// message truncation, and environment-based setup.
+///
+/// See the [`utils::logging`] module documentation for detailed usage examples.
+pub use utils::logging::{
+    setup as setup_logging, setup_from_env as setup_logging_from_env,
+    get_verbosity, set_verbosity, truncate_message, LogLevel, Verbosity, WithLogger,
+    ENV_COMPOSIO_LOGGING_LEVEL, ENV_COMPOSIO_LOG_VERBOSITY,
+};
 
 // ============================================================================
 // Session Management
@@ -230,6 +290,33 @@ pub use models::MetaToolExecutionRequest;
 /// Request to create an authentication link
 pub use models::LinkRequest;
 
+/// Parameters for creating an authentication configuration
+pub use models::AuthConfigCreateParams;
+
+/// Authentication configuration data
+pub use models::AuthConfigData;
+
+/// Parameters for listing authentication configurations
+pub use models::AuthConfigListParams;
+
+/// Parameters for updating an authentication configuration
+pub use models::AuthConfigUpdateParams;
+
+/// Parameters for creating a connected account
+pub use models::ConnectedAccountCreateParams;
+
+/// Reference to an authentication configuration
+pub use models::AuthConfigReference;
+
+/// Connection data for creating a connected account
+pub use models::ConnectionData;
+
+/// Parameters for listing connected accounts
+pub use models::ConnectedAccountListParams;
+
+/// Parameters for executing a proxy request
+pub use models::ToolProxyParams;
+
 // ============================================================================
 // Response Models
 // ============================================================================
@@ -267,6 +354,39 @@ pub use models::LinkResponse;
 /// Error response from API
 pub use models::ErrorResponse;
 
+/// Response from creating an authentication configuration
+pub use models::AuthConfigCreateResponse;
+
+/// Response from listing authentication configurations
+pub use models::AuthConfigListResponse;
+
+/// Response from retrieving a single authentication configuration
+pub use models::AuthConfigRetrieveResponse;
+
+/// Information about an authentication configuration
+pub use models::AuthConfigInfo;
+
+/// Response from creating a connected account
+pub use models::ConnectedAccountCreateResponse;
+
+/// Response from listing connected accounts
+pub use models::ConnectedAccountListResponse;
+
+/// Detailed information about a connected account
+pub use models::ConnectedAccountDetail;
+
+/// Response from retrieving a single connected account
+pub use models::ConnectedAccountRetrieveResponse;
+
+/// Response from updating connected account status
+pub use models::ConnectedAccountUpdateStatusResponse;
+
+/// Response from a proxy request
+pub use models::ToolProxyResponse;
+
+/// Response from creating or updating a trigger instance
+pub use models::TriggerInstanceUpsertResponse;
+
 // ============================================================================
 // Enums
 // ============================================================================
@@ -279,6 +399,100 @@ pub use models::TagType;
 
 /// Authentication schemes supported by toolkits
 pub use models::AuthScheme;
+
+// ============================================================================
+// Versioning Types
+// ============================================================================
+
+/// Toolkit version type
+pub use models::ToolkitVersion;
+
+/// Map of toolkit versions
+pub use models::ToolkitVersions;
+
+/// Toolkit version parameter for configuration
+pub use models::ToolkitVersionParam;
+
+/// Constant for "latest" version
+pub use models::TOOLKIT_LATEST_VERSION;
+
+// ============================================================================
+// Webhook Events
+// ============================================================================
+
+/// Webhook event types and utilities
+///
+/// This module provides strongly-typed definitions for webhook events,
+/// enabling type-safe handling of events like connection expiration.
+///
+/// See the [`models::webhook_events`] module documentation for detailed usage examples.
+pub use models::webhook_events::{
+    ConnectionExpiredEvent, ConnectionState, ConnectionStatus,
+    SingleConnectedAccountDetailedResponse, WebhookConnectionMetadata, WebhookEvent,
+    WebhookEventType, is_connection_expired_event,
+};
+
+// ============================================================================
+// Tool Modifiers
+// ============================================================================
+
+/// Tool modifier traits and utilities
+///
+/// This module provides functionality to modify tool schemas, execution parameters,
+/// and execution responses. Modifiers allow you to customize tool behavior without
+/// changing the underlying tool definitions.
+///
+/// See the [`models::modifiers`] module documentation for detailed usage examples.
+pub use models::modifiers::{
+    AfterExecute, BeforeExecute, SchemaModifier, BeforeExecuteMeta, AfterExecuteMeta,
+    Modifier, Modifiers, ToolExecuteParams, CustomAuthParams, CustomConnectionData,
+};
+
+// ============================================================================
+// Custom Tools
+// ============================================================================
+
+/// Custom tools functionality
+///
+/// This module provides functionality for creating and managing custom tools.
+/// Custom tools can be simple tools without authentication or toolkit-based
+/// tools with authentication and proxy execution.
+///
+/// See the [`models::custom_tools`] module documentation for detailed usage examples.
+pub use models::custom_tools::{
+    CustomTool, CustomToolsRegistry, ExecuteRequestFn,
+};
+
+// ============================================================================
+// Triggers
+// ============================================================================
+
+/// Trigger event types and utilities
+///
+/// This module provides functionality to manage triggers in Composio.
+/// Triggers are event listeners that notify your application when specific
+/// events occur in connected services.
+///
+/// See the [`models::triggers`] module documentation for detailed usage examples.
+pub use models::triggers::{
+    TriggerEvent, TriggerMetadata, TriggerConnectedAccount,
+    TriggerType, TriggerInstance, WebhookVersion,
+};
+
+// ============================================================================
+// Connected Accounts
+// ============================================================================
+
+/// Connected accounts management
+///
+/// This module provides functionality to manage connected accounts,
+/// which represent user connections to external services through Composio.
+///
+/// See the [`models::connected_accounts`] module documentation for detailed usage examples.
+pub use models::connected_accounts::{
+    ConnectionRequest, ConnectionStatus as ConnectedAccountStatus,
+    AuthScheme as ConnectedAccountAuthScheme, AUTH_SCHEME as auth_scheme,
+};
 
 // ============================================================================
 // Wizard Module (Skills Integration)

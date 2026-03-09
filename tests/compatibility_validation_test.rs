@@ -27,7 +27,9 @@ fn test_session_config_json_compatibility() {
         tools: None,
         tags: None,
         workbench: None,
-    };
+    
+            toolkit_versions: None,
+        };
 
     let json_str = serde_json::to_string(&minimal_config).unwrap();
     let json_value: serde_json::Value = serde_json::from_str(&json_str).unwrap();
@@ -125,6 +127,13 @@ fn test_tool_execution_request_json_compatibility() {
     let request_no_args = ToolExecutionRequest {
         tool_slug: "GITHUB_GET_USER".to_string(),
         arguments: None,
+        connected_account_id: None,
+        custom_auth_params: None,
+        custom_connection_data: None,
+        user_id: None,
+        text: None,
+        version: None,
+        dangerously_skip_version_check: None,
     };
 
     let json_str = serde_json::to_string(&request_no_args).unwrap();
@@ -237,7 +246,7 @@ fn test_enum_serialization_screaming_snake_case() {
         (AuthScheme::ApiKey, "API_KEY"),
         (AuthScheme::BearerToken, "BEARER_TOKEN"),
         (AuthScheme::Basic, "BASIC"),
-        (AuthScheme::Custom, "CUSTOM"),
+        // Removed Custom as it doesn't exist in the enum
     ];
 
     for (scheme, expected) in auth_schemes {
