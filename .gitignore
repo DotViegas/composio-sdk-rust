@@ -28,5 +28,6 @@ Thumbs.db
 
 # Temporary files and directories
 temp/
+temp
 
 .kiro
