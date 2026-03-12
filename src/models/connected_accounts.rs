@@ -451,14 +451,51 @@ pub struct ConnectedAccountListResponse {
     pub total_items: Option<u32>,
 }
 
+/// Parameters for refreshing a connected account
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ConnectedAccountRefreshParams {
+    /// Optional redirect URL for auth flows
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub redirect_url: Option<String>,
+
+    /// [EXPERIMENTAL] Validate provided credentials for API key flows
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub validate_credentials: Option<bool>,
+}
+
+/// Response from refreshing a connected account
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConnectedAccountRefreshResponse {
+    /// Connected account ID
+    pub id: String,
+
+    /// Current status
+    pub status: ConnectionStatus,
+
+    /// Redirect URL for completing auth, if needed
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub redirect_url: Option<String>,
+}
+
+/// Parameters for updating connected account status
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConnectedAccountUpdateStatusParams {
+    /// Set to true to enable account or false to disable it
+    pub enabled: bool,
+}
+
+/// Response from deleting a connected account
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConnectedAccountDeleteResponse {
+    /// Indicates whether delete operation succeeded
+    pub success: bool,
+}
+
 /// Connected account update status response
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConnectedAccountUpdateStatusResponse {
-    /// Success status
+    /// Indicates whether status update operation succeeded
     pub success: bool,
-
-    /// Updated status
-    pub status: ConnectionStatus,
 }
 
 // Note: The ConnectedAccounts resource implementation is pending full HTTP client integration.

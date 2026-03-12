@@ -220,16 +220,376 @@ impl ComposioClient {
         .await?;
 
         // Parse response
-        let session_response: crate::models::SessionResponse = response
-            .json()
-            .await
-            .map_err(ComposioError::NetworkError)?;
+        let session_response: crate::models::SessionResponse =
+            response.json().await.map_err(ComposioError::NetworkError)?;
 
         // Convert to Session
         Ok(crate::session::Session::from_response(
             self.clone(),
             session_response,
         ))
+    }
+
+    /// Create an MCP server
+    pub async fn create_mcp_server(
+        &self,
+        params: crate::models::mcp::MCPCreateParams,
+    ) -> Result<crate::models::mcp::MCPCreateResponse, ComposioError> {
+        let url = format!("{}/api/v3/mcp/servers", self.config.base_url);
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .post(&url)
+                .header("x-api-key", &self.config.api_key)
+                .json(&params)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        response.json().await.map_err(ComposioError::NetworkError)
+    }
+
+    /// Retrieve an MCP server by ID
+    pub async fn get_mcp_server(
+        &self,
+        id: impl Into<String>,
+    ) -> Result<crate::models::mcp::MCPItem, ComposioError> {
+        let id = id.into();
+        let url = format!("{}/api/v3/mcp/{}", self.config.base_url, id);
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .get(&url)
+                .header("x-api-key", &self.config.api_key)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        response.json().await.map_err(ComposioError::NetworkError)
+    }
+
+    /// Update an MCP server
+    pub async fn update_mcp_server(
+        &self,
+        id: impl Into<String>,
+        params: crate::models::mcp::MCPUpdateParams,
+    ) -> Result<crate::models::mcp::MCPUpdateResponse, ComposioError> {
+        let id = id.into();
+        let url = format!("{}/api/v3/mcp/{}", self.config.base_url, id);
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .patch(&url)
+                .header("x-api-key", &self.config.api_key)
+                .json(&params)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        response.json().await.map_err(ComposioError::NetworkError)
+    }
+
+    /// Delete an MCP server by ID
+    pub async fn delete_mcp_server(
+        &self,
+        id: impl Into<String>,
+    ) -> Result<crate::models::mcp::MCPDeleteResponse, ComposioError> {
+        let id = id.into();
+        let url = format!("{}/api/v3/mcp/{}", self.config.base_url, id);
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .delete(&url)
+                .header("x-api-key", &self.config.api_key)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        response.json().await.map_err(ComposioError::NetworkError)
+    }
+
+    /// List MCP servers
+    pub async fn list_mcp_servers(
+        &self,
+        params: crate::models::mcp::MCPListParams,
+    ) -> Result<crate::models::mcp::MCPListResponse, ComposioError> {
+        let url = format!("{}/api/v3/mcp/servers", self.config.base_url);
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .get(&url)
+                .header("x-api-key", &self.config.api_key)
+                .query(&params)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        response.json().await.map_err(ComposioError::NetworkError)
+    }
+
+    /// List MCP servers for app-scoped retrieval endpoint
+    pub async fn list_mcp_servers_for_app(
+        &self,
+        params: crate::models::mcp::MCPRetrieveAppParams,
+    ) -> Result<crate::models::mcp::MCPRetrieveAppResponse, ComposioError> {
+        let url = format!("{}/api/v3/mcp/servers/app", self.config.base_url);
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .get(&url)
+                .header("x-api-key", &self.config.api_key)
+                .query(&params)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        response.json().await.map_err(ComposioError::NetworkError)
+    }
+
+    /// Generate MCP URLs for users and/or connected accounts
+    pub async fn generate_mcp_server(
+        &self,
+        params: crate::models::mcp::MCPGenerateUrlParams,
+    ) -> Result<crate::models::mcp::MCPGenerateUrlResponse, ComposioError> {
+        let url = format!("{}/api/v3/mcp/servers/generate", self.config.base_url);
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .post(&url)
+                .header("x-api-key", &self.config.api_key)
+                .json(&params)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        response.json().await.map_err(ComposioError::NetworkError)
+    }
+
+    /// Create a custom MCP server
+    pub async fn create_custom_mcp_server(
+        &self,
+        params: crate::models::mcp::MCPCustomCreateParams,
+    ) -> Result<crate::models::mcp::MCPCustomCreateResponse, ComposioError> {
+        let url = format!("{}/api/v3/mcp/servers/custom", self.config.base_url);
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .post(&url)
+                .header("x-api-key", &self.config.api_key)
+                .json(&params)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        response.json().await.map_err(ComposioError::NetworkError)
+    }
+
+    /// Convert a legacy UUID to NanoId for a supported resource type.
+    pub async fn get_migration_nanoid(
+        &self,
+        params: crate::models::migration::MigrationGetNanoIdParams,
+    ) -> Result<crate::models::migration::MigrationGetNanoIdResponse, ComposioError> {
+        let url = format!("{}/api/v3/migration/get-nanoid", self.config.base_url);
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .get(&url)
+                .header("x-api-key", &self.config.api_key)
+                .query(&params)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        response.json().await.map_err(ComposioError::NetworkError)
+    }
+
+    /// Create a new CLI session.
+    pub async fn create_cli_session(
+        &self,
+    ) -> Result<crate::models::cli::CliCreateSessionResponse, ComposioError> {
+        let url = format!("{}/api/v3/cli/create-session", self.config.base_url);
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .post(&url)
+                .header("x-api-key", &self.config.api_key)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        response.json().await.map_err(ComposioError::NetworkError)
+    }
+
+    /// Retrieve a CLI session using UUID or code.
+    pub async fn get_cli_session(
+        &self,
+        params: crate::models::cli::CliGetSessionParams,
+    ) -> Result<crate::models::cli::CliGetSessionResponse, ComposioError> {
+        let url = format!("{}/api/v3/cli/get-session", self.config.base_url);
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .get(&url)
+                .header("x-api-key", &self.config.api_key)
+                .query(&params)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        response.json().await.map_err(ComposioError::NetworkError)
+    }
+
+    /// Retrieve project configuration.
+    pub async fn get_project_config(
+        &self,
+    ) -> Result<crate::models::project::ProjectConfigResponse, ComposioError> {
+        let url = format!("{}/api/v3/org/project/config", self.config.base_url);
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .get(&url)
+                .header("x-api-key", &self.config.api_key)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        response.json().await.map_err(ComposioError::NetworkError)
+    }
+
+    /// Update project configuration.
+    pub async fn update_project_config(
+        &self,
+        params: crate::models::project::ProjectConfigUpdateParams,
+    ) -> Result<crate::models::project::ProjectConfigResponse, ComposioError> {
+        let url = format!("{}/api/v3/org/project/config", self.config.base_url);
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .patch(&url)
+                .header("x-api-key", &self.config.api_key)
+                .json(&params)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        response.json().await.map_err(ComposioError::NetworkError)
     }
 
     /// List connected accounts
@@ -264,12 +624,13 @@ impl ComposioClient {
     pub async fn list_connected_accounts(
         &self,
         params: crate::models::connected_accounts::ConnectedAccountListParams,
-    ) -> Result<crate::models::connected_accounts::ConnectedAccountListResponse, ComposioError> {
+    ) -> Result<crate::models::connected_accounts::ConnectedAccountListResponse, ComposioError>
+    {
         let mut url = format!("{}/api/v3/connected_accounts", self.config.base_url);
-        
+
         // Build query parameters
         let mut query_params = vec![];
-        
+
         if let Some(user_ids) = &params.user_ids {
             query_params.push(format!("user_ids={}", user_ids.join(",")));
         }
@@ -280,11 +641,20 @@ impl ComposioClient {
             query_params.push(format!("toolkit_slugs={}", toolkit_slugs.join(",")));
         }
         if let Some(connected_account_ids) = &params.connected_account_ids {
-            query_params.push(format!("connected_account_ids={}", connected_account_ids.join(",")));
+            query_params.push(format!(
+                "connected_account_ids={}",
+                connected_account_ids.join(",")
+            ));
         }
         if let Some(statuses) = &params.statuses {
-            let status_strings: Vec<String> = statuses.iter()
-                .map(|s| serde_json::to_string(s).unwrap_or_default().trim_matches('"').to_string())
+            let status_strings: Vec<String> = statuses
+                .iter()
+                .map(|s| {
+                    serde_json::to_string(s)
+                        .unwrap_or_default()
+                        .trim_matches('"')
+                        .to_string()
+                })
                 .collect();
             query_params.push(format!("statuses={}", status_strings.join(",")));
         }
@@ -303,7 +673,7 @@ impl ComposioClient {
         if let Some(order_direction) = &params.order_direction {
             query_params.push(format!("order_direction={}", order_direction));
         }
-        
+
         if !query_params.is_empty() {
             url.push_str("?");
             url.push_str(&query_params.join("&"));
@@ -329,10 +699,7 @@ impl ComposioClient {
         .await?;
 
         // Parse response
-        Ok(response
-            .json()
-            .await
-            .map_err(ComposioError::NetworkError)?)
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
     }
 
     /// Get a specific connected account by ID
@@ -360,7 +727,10 @@ impl ComposioClient {
         account_id: impl Into<String>,
     ) -> Result<crate::models::connected_accounts::ConnectedAccountInfo, ComposioError> {
         let account_id = account_id.into();
-        let url = format!("{}/api/v3/connected_accounts/{}", self.config.base_url, account_id);
+        let url = format!(
+            "{}/api/v3/connected_accounts/{}",
+            self.config.base_url, account_id
+        );
 
         // Execute request with retry logic
         let response = crate::retry::with_retry(&self.config.retry_policy, || async {
@@ -382,10 +752,197 @@ impl ComposioClient {
         .await?;
 
         // Parse response
-        Ok(response
-            .json()
-            .await
-            .map_err(ComposioError::NetworkError)?)
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
+    }
+
+    /// Create a direct connected-account auth link.
+    pub async fn create_connected_account_link(
+        &self,
+        params: crate::models::link::ConnectedAccountLinkCreateParams,
+    ) -> Result<crate::models::link::ConnectedAccountLinkCreateResponse, ComposioError> {
+        let url = format!("{}/api/v3/connected_accounts/link", self.config.base_url);
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .post(&url)
+                .header("x-api-key", &self.config.api_key)
+                .json(&params)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
+    }
+
+    /// Refresh a connected account's authentication state.
+    pub async fn refresh_connected_account(
+        &self,
+        account_id: impl Into<String>,
+        params: crate::models::connected_accounts::ConnectedAccountRefreshParams,
+    ) -> Result<crate::models::connected_accounts::ConnectedAccountRefreshResponse, ComposioError>
+    {
+        let account_id = account_id.into();
+        let url = format!(
+            "{}/api/v3/connected_accounts/{}/refresh",
+            self.config.base_url, account_id
+        );
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .post(&url)
+                .header("x-api-key", &self.config.api_key)
+                .json(&params)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
+    }
+
+    /// Enable or disable a connected account.
+    pub async fn update_connected_account_status(
+        &self,
+        account_id: impl Into<String>,
+        params: crate::models::connected_accounts::ConnectedAccountUpdateStatusParams,
+    ) -> Result<
+        crate::models::connected_accounts::ConnectedAccountUpdateStatusResponse,
+        ComposioError,
+    > {
+        let account_id = account_id.into();
+        let url = format!(
+            "{}/api/v3/connected_accounts/{}/status",
+            self.config.base_url, account_id
+        );
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .patch(&url)
+                .header("x-api-key", &self.config.api_key)
+                .json(&params)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
+    }
+
+    /// Delete a connected account.
+    pub async fn delete_connected_account(
+        &self,
+        account_id: impl Into<String>,
+    ) -> Result<crate::models::connected_accounts::ConnectedAccountDeleteResponse, ComposioError>
+    {
+        let account_id = account_id.into();
+        let url = format!(
+            "{}/api/v3/connected_accounts/{}",
+            self.config.base_url, account_id
+        );
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .delete(&url)
+                .header("x-api-key", &self.config.api_key)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
+    }
+
+    // ========================================================================
+    // Files Methods
+    // ========================================================================
+
+    /// List files available in the project.
+    pub async fn list_files(
+        &self,
+        params: crate::models::files::FileListParams,
+    ) -> Result<crate::models::files::FileListResponse, ComposioError> {
+        let url = format!("{}/api/v3/files/list", self.config.base_url);
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .get(&url)
+                .header("x-api-key", &self.config.api_key)
+                .query(&params)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
+    }
+
+    /// Request a presigned upload URL for a file.
+    pub async fn create_file_upload_request(
+        &self,
+        params: crate::models::files::FileCreatePresignedUrlParams,
+    ) -> Result<crate::models::files::FileCreatePresignedUrlResponse, ComposioError> {
+        let url = format!("{}/api/v3/files/upload/request", self.config.base_url);
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .post(&url)
+                .header("x-api-key", &self.config.api_key)
+                .json(&params)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
     }
 
     // ========================================================================
@@ -430,10 +987,10 @@ impl ComposioClient {
         params: crate::models::toolkits::ToolkitListParams,
     ) -> Result<crate::models::toolkits::ToolkitListResponse, ComposioError> {
         let mut url = format!("{}/api/v3/toolkits", self.config.base_url);
-        
+
         // Build query parameters
         let mut query_params = vec![];
-        
+
         if let Some(category) = &params.category {
             query_params.push(format!("category={}", category));
         }
@@ -464,7 +1021,7 @@ impl ComposioClient {
         if let Some(show_deprecated) = params.show_deprecated {
             query_params.push(format!("show_deprecated={}", show_deprecated));
         }
-        
+
         if !query_params.is_empty() {
             url.push_str("?");
             url.push_str(&query_params.join("&"));
@@ -490,10 +1047,7 @@ impl ComposioClient {
         .await?;
 
         // Parse response
-        Ok(response
-            .json()
-            .await
-            .map_err(ComposioError::NetworkError)?)
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
     }
 
     /// Get a specific toolkit by slug
@@ -525,6 +1079,19 @@ impl ComposioClient {
         &self,
         slug: impl Into<String>,
     ) -> Result<crate::models::toolkits::ToolkitRetrieveResponse, ComposioError> {
+        self.get_toolkit_with_params(
+            slug,
+            crate::models::toolkits::ToolkitRetrieveParams::default(),
+        )
+        .await
+    }
+
+    /// Get a specific toolkit by slug with optional query parameters.
+    pub async fn get_toolkit_with_params(
+        &self,
+        slug: impl Into<String>,
+        params: crate::models::toolkits::ToolkitRetrieveParams,
+    ) -> Result<crate::models::toolkits::ToolkitRetrieveResponse, ComposioError> {
         let slug = slug.into();
         let url = format!("{}/api/v3/toolkits/{}", self.config.base_url, slug);
 
@@ -534,6 +1101,7 @@ impl ComposioClient {
                 .http_client
                 .get(&url)
                 .header("x-api-key", &self.config.api_key)
+                .query(&params)
                 .send()
                 .await
                 .map_err(ComposioError::NetworkError)?;
@@ -548,10 +1116,7 @@ impl ComposioClient {
         .await?;
 
         // Parse response
-        Ok(response
-            .json()
-            .await
-            .map_err(ComposioError::NetworkError)?)
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
     }
 
     /// List all toolkit categories
@@ -601,10 +1166,7 @@ impl ComposioClient {
         .await?;
 
         // Parse response
-        Ok(response
-            .json()
-            .await
-            .map_err(ComposioError::NetworkError)?)
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
     }
 
     /// Authorize a user to a toolkit
@@ -649,12 +1211,13 @@ impl ComposioClient {
     ) -> Result<crate::models::connected_accounts::ConnectionRequest, ComposioError> {
         let user_id = user_id.into();
         let toolkit = toolkit.into();
-        
+
         // Get or create auth config
         let auth_config_id = self.get_or_create_auth_config(&toolkit).await?;
-        
+
         // Initiate connection
-        self.initiate_connection(user_id, auth_config_id, None).await
+        self.initiate_connection(user_id, auth_config_id, None)
+            .await
     }
 
     /// Get or create an auth config for a toolkit (internal helper)
@@ -662,27 +1225,26 @@ impl ComposioClient {
     /// This method checks if an auth config exists for the toolkit.
     /// If found, returns the most recent one. If not found, creates a new one
     /// using Composio managed auth.
-    async fn get_or_create_auth_config(
-        &self,
-        toolkit: &str,
-    ) -> Result<String, ComposioError> {
-        use crate::models::auth_configs::{AuthConfigListParams, AuthConfigCreateParams, AuthConfigOptions};
-        
+    async fn get_or_create_auth_config(&self, toolkit: &str) -> Result<String, ComposioError> {
+        use crate::models::auth_configs::{
+            AuthConfigCreateParams, AuthConfigListParams, AuthConfigOptions,
+        };
+
         // List existing auth configs for this toolkit
         let params = AuthConfigListParams {
             toolkit_slug: Some(toolkit.to_string()),
             ..Default::default()
         };
-        
+
         let auth_configs = self.list_auth_configs(params).await?;
-        
+
         // If we have existing configs, return the most recent one
         if !auth_configs.items.is_empty() {
             let mut configs = auth_configs.items;
             configs.sort_by(|a, b| b.created_at.cmp(&a.created_at));
             return Ok(configs[0].id.clone());
         }
-        
+
         // Create new auth config using Composio managed auth
         let create_request = AuthConfigCreateParams {
             toolkit: toolkit.to_string(),
@@ -692,7 +1254,7 @@ impl ComposioClient {
                 restrict_to_following_tools: Some(vec![]),
             },
         };
-        
+
         let created = self.create_auth_config(create_request).await?;
         Ok(created.auth_config.id)
     }
@@ -707,9 +1269,9 @@ impl ComposioClient {
         callback_url: Option<String>,
     ) -> Result<crate::models::connected_accounts::ConnectionRequest, ComposioError> {
         use crate::models::connected_accounts::InitiateConnectionParams;
-        
+
         let url = format!("{}/api/v3/connected_accounts", self.config.base_url);
-        
+
         let request_body = InitiateConnectionParams {
             user_id,
             auth_config_id,
@@ -745,17 +1307,146 @@ impl ComposioClient {
             status: Option<crate::models::connected_accounts::ConnectionStatus>,
             redirect_url: Option<String>,
         }
-        
-        let conn_response: ConnectionResponse = response
-            .json()
-            .await
-            .map_err(ComposioError::NetworkError)?;
-        
+
+        let conn_response: ConnectionResponse =
+            response.json().await.map_err(ComposioError::NetworkError)?;
+
         Ok(crate::models::connected_accounts::ConnectionRequest::new(
             conn_response.id,
-            conn_response.status.unwrap_or(crate::models::connected_accounts::ConnectionStatus::Initiated),
+            conn_response
+                .status
+                .unwrap_or(crate::models::connected_accounts::ConnectionStatus::Initiated),
             conn_response.redirect_url,
         ))
+    }
+
+    /// Retrieve an auth config by ID.
+    pub async fn get_auth_config(
+        &self,
+        auth_config_id: impl Into<String>,
+    ) -> Result<crate::models::auth_configs::AuthConfigRetrieveResponse, ComposioError> {
+        let auth_config_id = auth_config_id.into();
+        let url = format!(
+            "{}/api/v3/auth_configs/{}",
+            self.config.base_url, auth_config_id
+        );
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .get(&url)
+                .header("x-api-key", &self.config.api_key)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
+    }
+
+    /// Update an auth config by ID.
+    pub async fn update_auth_config(
+        &self,
+        auth_config_id: impl Into<String>,
+        params: crate::models::auth_configs::AuthConfigUpdateParams,
+    ) -> Result<crate::models::auth_configs::AuthConfigUpdateResponse, ComposioError> {
+        let auth_config_id = auth_config_id.into();
+        let url = format!(
+            "{}/api/v3/auth_configs/{}",
+            self.config.base_url, auth_config_id
+        );
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .patch(&url)
+                .header("x-api-key", &self.config.api_key)
+                .json(&params)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
+    }
+
+    /// Delete an auth config by ID.
+    pub async fn delete_auth_config(
+        &self,
+        auth_config_id: impl Into<String>,
+    ) -> Result<crate::models::auth_configs::AuthConfigDeleteResponse, ComposioError> {
+        let auth_config_id = auth_config_id.into();
+        let url = format!(
+            "{}/api/v3/auth_configs/{}",
+            self.config.base_url, auth_config_id
+        );
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .delete(&url)
+                .header("x-api-key", &self.config.api_key)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
+    }
+
+    /// Update auth config status to ENABLED or DISABLED.
+    pub async fn update_auth_config_status(
+        &self,
+        auth_config_id: impl Into<String>,
+        status: crate::models::auth_configs::AuthConfigStatus,
+    ) -> Result<crate::models::auth_configs::AuthConfigStatusUpdateResponse, ComposioError> {
+        let auth_config_id = auth_config_id.into();
+        let url = format!(
+            "{}/api/v3/auth_configs/{}/{}",
+            self.config.base_url,
+            auth_config_id,
+            status.as_str()
+        );
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .patch(&url)
+                .header("x-api-key", &self.config.api_key)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
     }
 
     /// List auth configs (internal helper)
@@ -764,10 +1455,10 @@ impl ComposioClient {
         params: crate::models::auth_configs::AuthConfigListParams,
     ) -> Result<crate::models::auth_configs::AuthConfigListResponse, ComposioError> {
         let mut url = format!("{}/api/v3/auth_configs", self.config.base_url);
-        
+
         // Build query parameters
         let mut query_params = vec![];
-        
+
         if let Some(toolkit_slug) = &params.toolkit_slug {
             query_params.push(format!("toolkit_slug={}", toolkit_slug));
         }
@@ -786,7 +1477,7 @@ impl ComposioClient {
         if let Some(cursor) = &params.cursor {
             query_params.push(format!("cursor={}", cursor));
         }
-        
+
         if !query_params.is_empty() {
             url.push_str("?");
             url.push_str(&query_params.join("&"));
@@ -812,10 +1503,7 @@ impl ComposioClient {
         .await?;
 
         // Parse response
-        Ok(response
-            .json()
-            .await
-            .map_err(ComposioError::NetworkError)?)
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
     }
 
     /// Create auth config (internal helper)
@@ -846,10 +1534,7 @@ impl ComposioClient {
         .await?;
 
         // Parse response
-        Ok(response
-            .json()
-            .await
-            .map_err(ComposioError::NetworkError)?)
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
     }
 
     /// Get connected account initiation fields for a toolkit
@@ -893,16 +1578,16 @@ impl ComposioClient {
     ) -> Result<Vec<crate::models::toolkits::AuthField>, ComposioError> {
         let toolkit = toolkit.into();
         let auth_scheme = auth_scheme.into();
-        
+
         let toolkit_info = self.get_toolkit(&toolkit).await?;
-        
+
         let details = toolkit_info.auth_config_details.ok_or_else(|| {
             ComposioError::InvalidInput(format!(
                 "No auth config details found for toolkit: {}",
                 toolkit
             ))
         })?;
-        
+
         for auth_detail in details {
             if auth_detail.mode == auth_scheme {
                 if required_only {
@@ -914,7 +1599,7 @@ impl ComposioClient {
                 }
             }
         }
-        
+
         Err(ComposioError::InvalidInput(format!(
             "Auth config details not found with toolkit={} and auth_scheme={}",
             toolkit, auth_scheme
@@ -962,16 +1647,16 @@ impl ComposioClient {
     ) -> Result<Vec<crate::models::toolkits::AuthField>, ComposioError> {
         let toolkit = toolkit.into();
         let auth_scheme = auth_scheme.into();
-        
+
         let toolkit_info = self.get_toolkit(&toolkit).await?;
-        
+
         let details = toolkit_info.auth_config_details.ok_or_else(|| {
             ComposioError::InvalidInput(format!(
                 "No auth config details found for toolkit: {}",
                 toolkit
             ))
         })?;
-        
+
         for auth_detail in details {
             if auth_detail.mode == auth_scheme {
                 if required_only {
@@ -983,7 +1668,7 @@ impl ComposioClient {
                 }
             }
         }
-        
+
         Err(ComposioError::InvalidInput(format!(
             "Auth config details not found with toolkit={} and auth_scheme={}",
             toolkit, auth_scheme
@@ -1032,10 +1717,10 @@ impl ComposioClient {
         params: crate::models::tools::ToolListParams,
     ) -> Result<crate::models::tools::ToolListResponse, ComposioError> {
         let mut url = format!("{}/api/v3/tools", self.config.base_url);
-        
+
         // Build query parameters
         let mut query_params = vec![];
-        
+
         if let Some(tool_slugs) = &params.tool_slugs {
             query_params.push(format!("tool_slugs={}", tool_slugs.join(",")));
         }
@@ -1066,7 +1751,7 @@ impl ComposioClient {
         if let Some(toolkit_versions) = &params.toolkit_versions {
             query_params.push(format!("toolkit_versions={}", toolkit_versions));
         }
-        
+
         if !query_params.is_empty() {
             url.push_str("?");
             url.push_str(&query_params.join("&"));
@@ -1092,10 +1777,33 @@ impl ComposioClient {
         .await?;
 
         // Parse response
-        Ok(response
-            .json()
-            .await
-            .map_err(ComposioError::NetworkError)?)
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
+    }
+
+    /// Retrieve all tool slug enumeration values.
+    pub async fn retrieve_tool_enum(
+        &self,
+    ) -> Result<crate::models::tools::ToolRetrieveEnumResponse, ComposioError> {
+        let url = format!("{}/api/v3/tools/enum", self.config.base_url);
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .get(&url)
+                .header("x-api-key", &self.config.api_key)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        response.json().await.map_err(ComposioError::NetworkError)
     }
 
     /// Get a specific tool by slug
@@ -1151,10 +1859,7 @@ impl ComposioClient {
         .await?;
 
         // Parse response
-        Ok(response
-            .json()
-            .await
-            .map_err(ComposioError::NetworkError)?)
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
     }
 
     /// Execute a tool
@@ -1219,27 +1924,35 @@ impl ComposioClient {
     ) -> Result<crate::models::tools::ToolExecutionResponse, ComposioError> {
         use crate::utils::toolkit_version::get_toolkit_version;
 
-        let url = format!("{}/api/v3/tools/execute/{}", self.config.base_url, params.slug());
+        let url = format!(
+            "{}/api/v3/tools/execute/{}",
+            self.config.base_url,
+            params.slug()
+        );
 
         // Resolve version if not provided
         let version = if let Some(v) = params.version {
             v
         } else {
             // Extract toolkit from slug (e.g., "GITHUB_CREATE_ISSUE" -> "github")
-            let toolkit = params.slug()
+            let toolkit = params
+                .slug()
                 .split('_')
                 .next()
                 .unwrap_or(params.slug())
                 .to_lowercase();
-            
-            get_toolkit_version(&toolkit, self.config.toolkit_versions.as_ref()).as_str().to_string()
+
+            get_toolkit_version(&toolkit, self.config.toolkit_versions.as_ref())
+                .as_str()
+                .to_string()
         };
 
         // Check if version is 'latest' and skip check is not enabled
         if version == "latest" && !params.dangerously_skip_version_check.unwrap_or(false) {
             return Err(ComposioError::InvalidInput(
                 "Tool version 'latest' requires dangerously_skip_version_check=true. \
-                 Please specify an explicit version or enable the skip check.".to_string()
+                 Please specify an explicit version or enable the skip check."
+                    .to_string(),
             ));
         }
 
@@ -1288,10 +2001,7 @@ impl ComposioClient {
         .await?;
 
         // Parse response
-        Ok(response
-            .json()
-            .await
-            .map_err(ComposioError::NetworkError)?)
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
     }
 
     /// Execute a proxy request to a third-party API
@@ -1378,10 +2088,7 @@ impl ComposioClient {
         .await?;
 
         // Parse response
-        Ok(response
-            .json()
-            .await
-            .map_err(ComposioError::NetworkError)?)
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
     }
 
     /// Generate tool inputs from natural language
@@ -1425,8 +2132,7 @@ impl ComposioClient {
     ) -> Result<crate::models::tools::ToolInputGenerationResponse, ComposioError> {
         let url = format!(
             "{}/api/v3/tools/execute/{}/input",
-            self.config.base_url,
-            params.tool_slug
+            self.config.base_url, params.tool_slug
         );
 
         // Build request body
@@ -1462,10 +2168,7 @@ impl ComposioClient {
         .await?;
 
         // Parse response
-        Ok(response
-            .json()
-            .await
-            .map_err(ComposioError::NetworkError)?)
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
     }
 
     // ========================================================================
@@ -1510,10 +2213,10 @@ impl ComposioClient {
         params: crate::models::triggers::TriggerTypeListParams,
     ) -> Result<crate::models::triggers::TriggerTypeListResponse, ComposioError> {
         let mut url = format!("{}/api/v3/triggers_types", self.config.base_url);
-        
+
         // Build query parameters
         let mut query_params = vec![];
-        
+
         if let Some(cursor) = &params.cursor {
             query_params.push(format!("cursor={}", cursor));
         }
@@ -1526,7 +2229,7 @@ impl ComposioClient {
         if let Some(toolkit_versions) = &params.toolkit_versions {
             query_params.push(format!("toolkit_versions={}", toolkit_versions));
         }
-        
+
         if !query_params.is_empty() {
             url.push_str("?");
             url.push_str(&query_params.join("&"));
@@ -1552,10 +2255,33 @@ impl ComposioClient {
         .await?;
 
         // Parse response
-        Ok(response
-            .json()
-            .await
-            .map_err(ComposioError::NetworkError)?)
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
+    }
+
+    /// Retrieve all trigger type slug enumeration values.
+    pub async fn retrieve_trigger_type_enum(
+        &self,
+    ) -> Result<crate::models::triggers::TriggerTypeRetrieveEnumResponse, ComposioError> {
+        let url = format!("{}/api/v3/triggers_types/list/enum", self.config.base_url);
+
+        let response = crate::retry::with_retry(&self.config.retry_policy, || async {
+            let response = self
+                .http_client
+                .get(&url)
+                .header("x-api-key", &self.config.api_key)
+                .send()
+                .await
+                .map_err(ComposioError::NetworkError)?;
+
+            if !response.status().is_success() {
+                return Err(ComposioError::from_response(response).await);
+            }
+
+            Ok(response)
+        })
+        .await?;
+
+        response.json().await.map_err(ComposioError::NetworkError)
     }
 
     /// Get a specific trigger type by slug
@@ -1588,6 +2314,19 @@ impl ComposioClient {
         &self,
         slug: impl Into<String>,
     ) -> Result<crate::models::triggers::TriggerType, ComposioError> {
+        self.get_trigger_type_with_params(
+            slug,
+            crate::models::triggers::TriggerTypeRetrieveParams::default(),
+        )
+        .await
+    }
+
+    /// Get a specific trigger type by slug with optional query parameters.
+    pub async fn get_trigger_type_with_params(
+        &self,
+        slug: impl Into<String>,
+        params: crate::models::triggers::TriggerTypeRetrieveParams,
+    ) -> Result<crate::models::triggers::TriggerType, ComposioError> {
         let slug = slug.into();
         let url = format!("{}/api/v3/triggers_types/{}", self.config.base_url, slug);
 
@@ -1597,6 +2336,7 @@ impl ComposioClient {
                 .http_client
                 .get(&url)
                 .header("x-api-key", &self.config.api_key)
+                .query(&params)
                 .send()
                 .await
                 .map_err(ComposioError::NetworkError)?;
@@ -1611,10 +2351,7 @@ impl ComposioClient {
         .await?;
 
         // Parse response
-        Ok(response
-            .json()
-            .await
-            .map_err(ComposioError::NetworkError)?)
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
     }
 
     /// List active trigger instances
@@ -1655,10 +2392,10 @@ impl ComposioClient {
         params: crate::models::triggers::TriggerInstanceListParams,
     ) -> Result<crate::models::triggers::TriggerInstanceListResponse, ComposioError> {
         let mut url = format!("{}/api/v3/trigger_instances/active", self.config.base_url);
-        
+
         // Build query parameters
         let mut query_params = vec![];
-        
+
         if let Some(trigger_ids) = &params.trigger_ids {
             query_params.push(format!("trigger_ids={}", trigger_ids.join(",")));
         }
@@ -1669,7 +2406,10 @@ impl ComposioClient {
             query_params.push(format!("auth_config_ids={}", auth_config_ids.join(",")));
         }
         if let Some(connected_account_ids) = &params.connected_account_ids {
-            query_params.push(format!("connected_account_ids={}", connected_account_ids.join(",")));
+            query_params.push(format!(
+                "connected_account_ids={}",
+                connected_account_ids.join(",")
+            ));
         }
         if let Some(show_disabled) = params.show_disabled {
             query_params.push(format!("show_disabled={}", show_disabled));
@@ -1680,7 +2420,7 @@ impl ComposioClient {
         if let Some(cursor) = &params.cursor {
             query_params.push(format!("cursor={}", cursor));
         }
-        
+
         if !query_params.is_empty() {
             url.push_str("?");
             url.push_str(&query_params.join("&"));
@@ -1706,10 +2446,7 @@ impl ComposioClient {
         .await?;
 
         // Parse response
-        Ok(response
-            .json()
-            .await
-            .map_err(ComposioError::NetworkError)?)
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
     }
 
     /// Create a trigger instance
@@ -1758,40 +2495,43 @@ impl ComposioClient {
         // If user_id is provided but not connected_account_id, find the connected account
         if params.user_id.is_some() && params.connected_account_id.is_none() {
             let user_id = params.user_id.as_ref().unwrap();
-            
+
             // Get trigger type to find toolkit
             let trigger_type = self.get_trigger_type(&params.slug).await?;
             let toolkit = trigger_type.toolkit.slug;
-            
+
             // Find connected account for this user and toolkit
             let account_params = crate::models::connected_accounts::ConnectedAccountListParams {
                 user_ids: Some(vec![user_id.clone()]),
                 toolkit_slugs: Some(vec![toolkit]),
                 ..Default::default()
             };
-            
+
             let accounts = self.list_connected_accounts(account_params).await?;
-            
+
             if accounts.items.is_empty() {
                 return Err(ComposioError::InvalidInput(format!(
                     "No connected accounts found for trigger {} and user {}",
                     params.slug, user_id
                 )));
             }
-            
+
             // Use the most recent account
             let mut sorted_accounts = accounts.items;
             sorted_accounts.sort_by(|a, b| b.created_at.cmp(&a.created_at));
             params.connected_account_id = Some(sorted_accounts[0].id.clone());
         }
-        
+
         if params.connected_account_id.is_none() {
             return Err(ComposioError::InvalidInput(
-                "Either connected_account_id or user_id must be provided".to_string()
+                "Either connected_account_id or user_id must be provided".to_string(),
             ));
         }
 
-        let url = format!("{}/api/v3/trigger_instances/{}/upsert", self.config.base_url, params.slug);
+        let url = format!(
+            "{}/api/v3/trigger_instances/{}/upsert",
+            self.config.base_url, params.slug
+        );
 
         // Build request body
         let mut body = serde_json::json!({
@@ -1827,10 +2567,7 @@ impl ComposioClient {
         .await?;
 
         // Parse response
-        Ok(response
-            .json()
-            .await
-            .map_err(ComposioError::NetworkError)?)
+        Ok(response.json().await.map_err(ComposioError::NetworkError)?)
     }
 
     /// Delete a trigger instance
@@ -1856,12 +2593,12 @@ impl ComposioClient {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn delete_trigger(
-        &self,
-        trigger_id: impl Into<String>,
-    ) -> Result<(), ComposioError> {
+    pub async fn delete_trigger(&self, trigger_id: impl Into<String>) -> Result<(), ComposioError> {
         let trigger_id = trigger_id.into();
-        let url = format!("{}/api/v3/trigger_instances/manage/{}", self.config.base_url, trigger_id);
+        let url = format!(
+            "{}/api/v3/trigger_instances/manage/{}",
+            self.config.base_url, trigger_id
+        );
 
         // Execute request with retry logic
         crate::retry::with_retry(&self.config.retry_policy, || async {
@@ -1908,12 +2645,12 @@ impl ComposioClient {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn enable_trigger(
-        &self,
-        trigger_id: impl Into<String>,
-    ) -> Result<(), ComposioError> {
+    pub async fn enable_trigger(&self, trigger_id: impl Into<String>) -> Result<(), ComposioError> {
         let trigger_id = trigger_id.into();
-        let url = format!("{}/api/v3/trigger_instances/manage/{}", self.config.base_url, trigger_id);
+        let url = format!(
+            "{}/api/v3/trigger_instances/manage/{}",
+            self.config.base_url, trigger_id
+        );
 
         let body = serde_json::json!({
             "status": "enable"
@@ -1970,7 +2707,10 @@ impl ComposioClient {
         trigger_id: impl Into<String>,
     ) -> Result<(), ComposioError> {
         let trigger_id = trigger_id.into();
-        let url = format!("{}/api/v3/trigger_instances/manage/{}", self.config.base_url, trigger_id);
+        let url = format!(
+            "{}/api/v3/trigger_instances/manage/{}",
+            self.config.base_url, trigger_id
+        );
 
         let body = serde_json::json!({
             "status": "disable"
@@ -2056,17 +2796,19 @@ impl ComposioClient {
         &self,
         params: crate::models::triggers::WebhookVerifyParams,
     ) -> Result<crate::models::triggers::VerifyWebhookResult, ComposioError> {
-        use base64::{Engine as _, engine::general_purpose};
+        use base64::{engine::general_purpose, Engine as _};
         use std::time::{SystemTime, UNIX_EPOCH};
 
         let tolerance = params.tolerance.unwrap_or(300);
 
         // Validate timestamp if tolerance is set
         if tolerance > 0 {
-            let timestamp_seconds: i64 = params.timestamp.parse()
-                .map_err(|_| ComposioError::InvalidInput(
-                    format!("Invalid webhook timestamp: {}. Expected Unix timestamp in seconds.", params.timestamp)
-                ))?;
+            let timestamp_seconds: i64 = params.timestamp.parse().map_err(|_| {
+                ComposioError::InvalidInput(format!(
+                    "Invalid webhook timestamp: {}. Expected Unix timestamp in seconds.",
+                    params.timestamp
+                ))
+            })?;
 
             let current_time = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -2088,34 +2830,40 @@ impl ComposioClient {
 
         // Verify signature
         if params.payload.is_empty() {
-            return Err(ComposioError::InvalidInput("No webhook payload was provided.".to_string()));
+            return Err(ComposioError::InvalidInput(
+                "No webhook payload was provided.".to_string(),
+            ));
         }
 
         if params.signature.is_empty() {
             return Err(ComposioError::InvalidInput(
                 "No signature header value was provided. \
-                Please pass the value of the webhook signature header.".to_string()
+                Please pass the value of the webhook signature header."
+                    .to_string(),
             ));
         }
 
         if params.secret.is_empty() {
             return Err(ComposioError::InvalidInput(
                 "No webhook secret was provided. \
-                You can find your webhook secret in your Composio dashboard.".to_string()
+                You can find your webhook secret in your Composio dashboard."
+                    .to_string(),
             ));
         }
 
         if params.id.is_empty() {
             return Err(ComposioError::InvalidInput(
                 "No webhook ID was provided. \
-                Please pass the value of the 'webhook-id' header.".to_string()
+                Please pass the value of the 'webhook-id' header."
+                    .to_string(),
             ));
         }
 
         if params.timestamp.is_empty() {
             return Err(ComposioError::InvalidInput(
                 "No webhook timestamp was provided. \
-                Please pass the value of the 'webhook-timestamp' header.".to_string()
+                Please pass the value of the 'webhook-timestamp' header."
+                    .to_string(),
             ));
         }
 
@@ -2132,7 +2880,8 @@ impl ComposioClient {
         if v1_signatures.is_empty() {
             return Err(ComposioError::InvalidInput(
                 "No valid v1 signature found in the signature header. \
-                Expected format: 'v1,base64EncodedSignature'".to_string()
+                Expected format: 'v1,base64EncodedSignature'"
+                    .to_string(),
             ));
         }
 
@@ -2169,12 +2918,19 @@ impl ComposioClient {
         }
 
         if !signature_valid {
-            return Err(ComposioError::InvalidInput("The signature provided is invalid.".to_string()));
+            return Err(ComposioError::InvalidInput(
+                "The signature provided is invalid.".to_string(),
+            ));
         }
 
         // Parse and detect version
-        let raw_payload: serde_json::Value = serde_json::from_str(&params.payload)
-            .map_err(|e| ComposioError::InvalidInput(format!("Failed to parse webhook payload as JSON: {}", e)))?;
+        let raw_payload: serde_json::Value =
+            serde_json::from_str(&params.payload).map_err(|e| {
+                ComposioError::InvalidInput(format!(
+                    "Failed to parse webhook payload as JSON: {}",
+                    e
+                ))
+            })?;
 
         // Detect version and normalize payload
         let (version, normalized_payload) = self.parse_webhook_payload(&raw_payload)?;
@@ -2190,25 +2946,31 @@ impl ComposioClient {
     fn parse_webhook_payload(
         &self,
         data: &serde_json::Value,
-    ) -> Result<(crate::models::triggers::WebhookVersion, crate::models::triggers::TriggerEvent), ComposioError> {
+    ) -> Result<
+        (
+            crate::models::triggers::WebhookVersion,
+            crate::models::triggers::TriggerEvent,
+        ),
+        ComposioError,
+    > {
         use crate::models::triggers::WebhookVersion;
 
         // Try V3 first (has 'type' starting with 'composio.' and 'metadata' as dict)
         if let Some(obj) = data.as_object() {
             if let Some(event_type) = obj.get("type").and_then(|v| v.as_str()) {
-                if event_type.starts_with("composio.") 
-                    && obj.contains_key("metadata") 
+                if event_type.starts_with("composio.")
+                    && obj.contains_key("metadata")
                     && obj.get("metadata").and_then(|v| v.as_object()).is_some()
                     && obj.contains_key("id")
-                    && obj.contains_key("data") {
+                    && obj.contains_key("data")
+                {
                     return Ok((WebhookVersion::V3, self.normalize_v3_payload(data)?));
                 }
             }
 
             // Try V2 (has 'type', 'timestamp', 'data' with nested fields)
-            if obj.contains_key("type")
-                && obj.contains_key("timestamp")
-                && obj.contains_key("data") {
+            if obj.contains_key("type") && obj.contains_key("timestamp") && obj.contains_key("data")
+            {
                 if let Some(data_obj) = obj.get("data").and_then(|v| v.as_object()) {
                     if data_obj.contains_key("connection_id") {
                         return Ok((WebhookVersion::V2, self.normalize_v2_payload(data)?));
@@ -2220,14 +2982,16 @@ impl ComposioClient {
             if obj.contains_key("trigger_name")
                 && obj.contains_key("connection_id")
                 && obj.contains_key("trigger_id")
-                && obj.contains_key("payload") {
+                && obj.contains_key("payload")
+            {
                 return Ok((WebhookVersion::V1, self.normalize_v1_payload(data)?));
             }
         }
 
         Err(ComposioError::InvalidInput(
             "Webhook payload does not match any known version (V1, V2, or V3). \
-            Please ensure the payload structure is correct.".to_string()
+            Please ensure the payload structure is correct."
+                .to_string(),
         ))
     }
 
@@ -2236,21 +3000,24 @@ impl ComposioClient {
         &self,
         data: &serde_json::Value,
     ) -> Result<crate::models::triggers::TriggerEvent, ComposioError> {
-        use crate::models::triggers::{TriggerEvent, TriggerMetadata, TriggerConnectedAccount};
+        use crate::models::triggers::{TriggerConnectedAccount, TriggerEvent, TriggerMetadata};
 
-        let obj = data.as_object().ok_or_else(|| 
+        let obj = data.as_object().ok_or_else(|| {
             ComposioError::InvalidInput("V1 payload must be an object".to_string())
-        )?;
+        })?;
 
-        let trigger_id = obj.get("trigger_id")
+        let trigger_id = obj
+            .get("trigger_id")
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_string();
-        let trigger_name = obj.get("trigger_name")
+        let trigger_name = obj
+            .get("trigger_name")
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_string();
-        let connection_id = obj.get("connection_id")
+        let connection_id = obj
+            .get("connection_id")
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_string();
@@ -2259,7 +3026,7 @@ impl ComposioClient {
         Ok(TriggerEvent {
             id: trigger_id.clone(),
             uuid: trigger_id.clone(),
-            user_id: String::new(), // V1 doesn't have user_id
+            user_id: String::new(),      // V1 doesn't have user_id
             toolkit_slug: String::new(), // V1 doesn't have toolkit_slug
             trigger_slug: trigger_name.clone(),
             metadata: TriggerMetadata {
@@ -2288,44 +3055,56 @@ impl ComposioClient {
         &self,
         data: &serde_json::Value,
     ) -> Result<crate::models::triggers::TriggerEvent, ComposioError> {
-        use crate::models::triggers::{TriggerEvent, TriggerMetadata, TriggerConnectedAccount};
+        use crate::models::triggers::{TriggerConnectedAccount, TriggerEvent, TriggerMetadata};
 
-        let obj = data.as_object().ok_or_else(|| 
+        let obj = data.as_object().ok_or_else(|| {
             ComposioError::InvalidInput("V2 payload must be an object".to_string())
-        )?;
+        })?;
 
-        let event_type = obj.get("type")
+        let event_type = obj
+            .get("type")
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_uppercase();
 
-        let payload_data = obj.get("data")
-            .and_then(|v| v.as_object())
-            .ok_or_else(|| ComposioError::InvalidInput("V2 payload missing 'data' object".to_string()))?;
+        let payload_data = obj.get("data").and_then(|v| v.as_object()).ok_or_else(|| {
+            ComposioError::InvalidInput("V2 payload missing 'data' object".to_string())
+        })?;
 
-        let trigger_id = payload_data.get("trigger_id")
+        let trigger_id = payload_data
+            .get("trigger_id")
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_string();
-        let trigger_nano_id = payload_data.get("trigger_nano_id")
+        let trigger_nano_id = payload_data
+            .get("trigger_nano_id")
             .and_then(|v| v.as_str())
             .unwrap_or(&trigger_id)
             .to_string();
-        let user_id = payload_data.get("user_id")
+        let user_id = payload_data
+            .get("user_id")
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_string();
-        let connection_id = payload_data.get("connection_id")
+        let connection_id = payload_data
+            .get("connection_id")
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_string();
-        let connection_nano_id = payload_data.get("connection_nano_id")
+        let connection_nano_id = payload_data
+            .get("connection_nano_id")
             .and_then(|v| v.as_str())
             .unwrap_or(&connection_id)
             .to_string();
 
         // Extract payload fields, excluding metadata fields
-        let excluded_keys = ["connection_id", "connection_nano_id", "trigger_nano_id", "trigger_id", "user_id"];
+        let excluded_keys = [
+            "connection_id",
+            "connection_nano_id",
+            "trigger_nano_id",
+            "trigger_id",
+            "user_id",
+        ];
         let mut filtered_payload = serde_json::Map::new();
         for (k, v) in payload_data.iter() {
             if !excluded_keys.contains(&k.as_str()) {
@@ -2365,15 +3144,18 @@ impl ComposioClient {
         &self,
         data: &serde_json::Value,
     ) -> Result<crate::models::triggers::TriggerEvent, ComposioError> {
-        use crate::models::triggers::{TriggerEvent, TriggerMetadata, TriggerConnectedAccount};
+        use crate::models::triggers::{TriggerConnectedAccount, TriggerEvent, TriggerMetadata};
 
-        let obj = data.as_object().ok_or_else(|| 
+        let obj = data.as_object().ok_or_else(|| {
             ComposioError::InvalidInput("V3 payload must be an object".to_string())
-        )?;
+        })?;
 
-        let metadata = obj.get("metadata")
+        let metadata = obj
+            .get("metadata")
             .and_then(|v| v.as_object())
-            .ok_or_else(|| ComposioError::InvalidInput("V3 payload missing 'metadata' object".to_string()))?;
+            .ok_or_else(|| {
+                ComposioError::InvalidInput("V3 payload missing 'metadata' object".to_string())
+            })?;
 
         // Check if this is a trigger event (has trigger-specific metadata fields)
         let is_trigger_event = metadata.contains_key("trigger_id")
@@ -2384,30 +3166,39 @@ impl ComposioClient {
             && metadata.contains_key("log_id");
 
         if is_trigger_event {
-            let trigger_id = metadata.get("trigger_id")
+            let trigger_id = metadata
+                .get("trigger_id")
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            let trigger_slug = metadata.get("trigger_slug")
+            let trigger_slug = metadata
+                .get("trigger_slug")
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            let user_id = metadata.get("user_id")
+            let user_id = metadata
+                .get("user_id")
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            let connected_account_id = metadata.get("connected_account_id")
+            let connected_account_id = metadata
+                .get("connected_account_id")
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            let auth_config_id = metadata.get("auth_config_id")
+            let auth_config_id = metadata
+                .get("auth_config_id")
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
 
             // Extract toolkit slug from trigger slug (e.g., "GITHUB_COMMIT_EVENT" -> "GITHUB")
             let toolkit_slug = if trigger_slug.contains('_') {
-                trigger_slug.split('_').next().unwrap_or("UNKNOWN").to_uppercase()
+                trigger_slug
+                    .split('_')
+                    .next()
+                    .unwrap_or("UNKNOWN")
+                    .to_uppercase()
             } else {
                 "UNKNOWN".to_string()
             };
@@ -2441,11 +3232,13 @@ impl ComposioClient {
             })
         } else {
             // Non-trigger V3 event (e.g., connection expired)
-            let event_type = obj.get("type")
+            let event_type = obj
+                .get("type")
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            let event_id = obj.get("id")
+            let event_id = obj
+                .get("id")
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
@@ -2710,7 +3503,10 @@ impl ComposioClientBuilder {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn toolkit_versions(mut self, versions: crate::models::versioning::ToolkitVersionParam) -> Self {
+    pub fn toolkit_versions(
+        mut self,
+        versions: crate::models::versioning::ToolkitVersionParam,
+    ) -> Self {
         self.toolkit_versions = Some(versions);
         self
     }

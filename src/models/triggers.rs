@@ -210,6 +210,19 @@ pub struct TriggerInstance {
     pub disabled_at: Option<String>,
 }
 
+/// Parameters for retrieving a trigger type
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct TriggerTypeRetrieveParams {
+    /// Toolkit version specification (for example: "latest" or bracket notation).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub toolkit_versions: Option<String>,
+}
+
+/// Trigger type enum response
+///
+/// Contains all available trigger type slug enumeration values.
+pub type TriggerTypeRetrieveEnumResponse = Vec<String>;
+
 /// Parameters for listing trigger types
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct TriggerTypeListParams {
@@ -391,6 +404,25 @@ mod tests {
         let v3 = WebhookVersion::V3;
         let json = serde_json::to_string(&v3).unwrap();
         assert_eq!(json, "\"V3\"");
+    }
+
+    #[test]
+    fn test_trigger_type_retrieve_params_serialization() {
+        let params = TriggerTypeRetrieveParams {
+            toolkit_versions: Some("latest".to_string()),
+        };
+
+        let value = serde_json::to_value(&params).unwrap();
+        assert_eq!(value["toolkit_versions"], "latest");
+    }
+
+    #[test]
+    fn test_trigger_type_retrieve_enum_response_deserialization() {
+        let payload = serde_json::json!(["GITHUB_COMMIT_EVENT", "SLACK_NEW_MESSAGE"]);
+
+        let response: TriggerTypeRetrieveEnumResponse = serde_json::from_value(payload).unwrap();
+        assert_eq!(response.len(), 2);
+        assert_eq!(response[0], "GITHUB_COMMIT_EVENT");
     }
 
     #[test]

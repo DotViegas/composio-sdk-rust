@@ -26,10 +26,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 // Re-export types from other modules to maintain compatibility
+pub use crate::models::modifiers::{CustomAuthParams, CustomConnectionData, ToolExecuteParams};
 pub use crate::models::response::ToolExecutionResponse;
-pub use crate::models::modifiers::{
-    ToolExecuteParams, CustomAuthParams, CustomConnectionData
-};
 
 /// Tool list parameters
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -157,6 +155,11 @@ pub struct ToolListResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub total_items: Option<u32>,
 }
+
+/// Tool enum response
+///
+/// Contains all available tool slug enumeration values.
+pub type ToolRetrieveEnumResponse = Vec<String>;
 
 /// Tool proxy parameters
 #[derive(Debug, Clone, Serialize, Deserialize)]
