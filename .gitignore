@@ -26,4 +26,7 @@ Thumbs.db
 *.profraw
 *.profdata
 
+# Temporary files and directories
+temp/
+
 .kiro
