@@ -5,8 +5,8 @@
 This report is being produced incrementally, resource-by-resource, as requested.
 
 - Total Python resources discovered under `temp/composio_client/resources`: 13 logical resources (`auth_configs`, `cli`, `connected_accounts`, `files`, `link`, `mcp`, `migration`, `project`, `tool_router`, `toolkits`, `tools`, `trigger_instances`, `triggers_types`).
-- Completed in this increment: **11/13** (`tools`, `toolkits`, `triggers_types`, `trigger_instances`, `connected_accounts`, `auth_configs`, `files`, `link`, `tool_router`, `mcp`, `migration`).
-- Pending: 2/13.
+- Completed in this increment: **13/13** (`tools`, `toolkits`, `triggers_types`, `trigger_instances`, `connected_accounts`, `auth_configs`, `files`, `link`, `tool_router`, `mcp`, `migration`, `project`, `cli`).
+- Pending: 0/13.
 
 ## Resource 1: `tools` (Python) vs Rust SDK parity
 
@@ -1113,6 +1113,523 @@ Rust models still include some UUID fields for backward compatibility in various
 3. Add tests validating enum/resource-type serialization and expected response mapping (`nanoid`).
 4. Document migration usage path in Rust SDK guides for legacy UUID consumers.
 
+## Resource 12: `project` (Python) vs Rust SDK parity
+
+### Files inspected
+
+- Python:
+  - `temp/composio_client/resources/project/project.py`
+  - `temp/composio_client/resources/project/config.py`
+  - `temp/composio_client/resources/project/__init__.py`
+  - `temp/composio_client/types/project/config_retrieve_response.py`
+  - `temp/composio_client/types/project/config_update_params.py`
+  - `temp/composio_client/types/project/config_update_response.py`
+- Rust:
+  - `src/client.rs`
+  - `src/models/mod.rs`
+  - `src/models/response.rs`
+
+### Python `project` surface (baseline)
+
+Python exposes a nested `project.config` resource with:
+
+1. `project.config.retrieve()` (`GET /api/v3/org/project/config`)
+2. `project.config.update(...)` (`PATCH /api/v3/org/project/config`)
+
+The update contract includes fields such as:
+- `display_name`
+- `is_2FA_enabled` (serialized from `is_2_fa_enabled`)
+- `log_visibility_setting` (`show_all` | `dont_store_data`)
+- `mask_secret_keys_in_connected_account`
+- `require_mcp_api_key`
+- `signed_url_file_expiry_in_seconds`
+- deprecated `is_composio_link_enabled_for_managed_auth`
+- `logo_url`
+
+### Rust `project` surface (current)
+
+No dedicated `project` resource or project-config endpoint wrappers were found in Rust.
+
+`ComposioClient` currently does not provide methods for:
+- `GET /api/v3/org/project/config`
+- `PATCH /api/v3/org/project/config`
+
+No project-config-specific request/response models were found in `src/models`.
+
+### Parity matrix (resource-level)
+
+| Capability | Python | Rust | Status | Notes |
+|---|---|---|---|---|
+| Retrieve project config | `project.config.retrieve` | _missing_ | MISSING_IN_RUST | No Rust method for `GET /api/v3/org/project/config`. |
+| Update project config | `project.config.update` | _missing_ | MISSING_IN_RUST | No Rust method for `PATCH /api/v3/org/project/config`. |
+| Typed update params | `ConfigUpdateParams` | _missing_ | MISSING_IN_RUST | Rust lacks typed request model for project-config updates. |
+| Typed config response | `ConfigRetrieveResponse`/`ConfigUpdateResponse` | _missing_ | MISSING_IN_RUST | Rust has no dedicated project-config response structs. |
+
+### Contract mismatches
+
+#### 1) Missing project-config endpoint wrappers (MISSING_IN_RUST)
+
+- Python provides direct wrappers for both retrieval and update at `/api/v3/org/project/config`.
+- Rust has no equivalent client methods in `ComposioClient`.
+
+#### 2) Missing aliased 2FA field handling contract (MISSING_IN_RUST)
+
+- Python explicitly handles `is_2FA_enabled` wire naming via aliasing from `is_2_fa_enabled`.
+- Rust has no project config model, so this alias-sensitive contract is not represented.
+
+#### 3) Missing log-visibility enum contract (MISSING_IN_RUST)
+
+- Python constrains `log_visibility_setting` to `show_all | dont_store_data`.
+- Rust has no typed enum/field for this project setting.
+
+### Behavior mismatches
+
+#### 1) Generated resource exposure vs absent Rust operation surface (MISSING_IN_RUST)
+
+- Python exposes nested `project.config` resource with sync/async and raw/streaming variants.
+- Rust currently exposes no operational surface for project configuration management.
+
+#### 2) Admin/project-governance settings management gap (MISSING_IN_RUST)
+
+- Python allows direct SDK control over project-level governance settings (2FA, log retention behavior, secret masking, MCP API-key requirement, signed URL expiry).
+- Rust users currently need external/manual API calls for these controls.
+
+### Response/type drift
+
+#### 1) Project-config models entirely absent in Rust (MISSING_IN_RUST)
+
+- Python has dedicated request/response models with typed optional fields and alias mappings.
+- Rust has no project model module or equivalent typed contracts.
+
+#### 2) Deprecated-but-supported field representation gap (MISSING_IN_RUST)
+
+- Python still models deprecated `is_composio_link_enabled_for_managed_auth` for compatibility.
+- Rust cannot represent or serialize this compatibility field in a typed way.
+
+### Recommended remediation order for `project`
+
+1. Add Rust client methods:
+   - `get_project_config()` -> `GET /api/v3/org/project/config`
+   - `update_project_config(params)` -> `PATCH /api/v3/org/project/config`
+2. Introduce typed Rust models for project config retrieve/update, including:
+   - serde alias handling for `is_2FA_enabled`,
+   - typed enum for `log_visibility_setting`,
+   - optional compatibility fields (including deprecated key).
+3. Add integration tests validating request serialization and response deserialization for project config endpoints.
+4. Document project-level configuration support in Rust SDK docs once endpoint parity is added.
+
+## Resource 13: `cli` (Python) vs Rust SDK parity
+
+### Files inspected
+
+- Python:
+  - `temp/composio_client/resources/cli.py`
+  - `temp/composio_client/types/cli_create_session_response.py`
+  - `temp/composio_client/types/cli_get_session_params.py`
+  - `temp/composio_client/types/cli_get_session_response.py`
+  - `temp/composio_client/resources/__init__.py`
+  - `temp/composio_client/_client.py`
+- Rust:
+  - `src/client.rs`
+  - `src/session.rs`
+  - `src/models/response.rs`
+  - `src/lib.rs`
+
+### Python `cli` surface (baseline)
+
+Python exposes a dedicated top-level `cli` resource (also attached to the root client as `composio.cli`) with two operations:
+
+1. `cli.create_session()` (`POST /api/v3/cli/create-session`)
+2. `cli.get_session(id)` (`GET /api/v3/cli/get-session`)
+
+The contract represents the Composio CLI login/orchestration flow:
+- create an ephemeral CLI session with a short code,
+- poll/retrieve by UUID or code until linked,
+- receive linked account + API key once authenticated.
+
+It also provides generated wrapper variants (`with_raw_response`, `with_streaming_response`) and async equivalents for both operations.
+
+### Rust `cli` surface (current)
+
+No dedicated Rust `cli` resource or wrappers for `/api/v3/cli/*` endpoints were found.
+
+Rust currently exposes session operations for **Tool Router sessions** (e.g., `create_session(...).send()`, `get_session(session_id)`) and session auth-link helpers (`Session::create_auth_link`), but these target Tool Router endpoints (`/tool_router/session/*`), not CLI-auth endpoints.
+
+No Rust request/response models were found for CLI session payloads (`id+code+expiresAt+status`, linked `account`, returned `api_key`).
+
+### Parity matrix (resource-level)
+
+| Capability | Python | Rust | Status | Notes |
+|---|---|---|---|---|
+| Create CLI auth session | `cli.create_session` | _missing_ | MISSING_IN_RUST | No Rust method for `POST /api/v3/cli/create-session`. |
+| Get/poll CLI auth session | `cli.get_session` | _missing_ | MISSING_IN_RUST | No Rust method for `GET /api/v3/cli/get-session`. |
+| CLI response typing (code/expiry/status) | `CliCreateSessionResponse`/`CliGetSessionResponse` | _missing_ | MISSING_IN_RUST | No Rust models for CLI session payloads. |
+| Root-client CLI resource exposure | `composio.cli` | _missing_ | MISSING_IN_RUST | Rust root client has no CLI domain accessor. |
+| Raw/streaming wrapper variants | generated wrappers on `cli` methods | _missing_ | MISSING_IN_RUST | No CLI wrappers exist to mirror this generated capability. |
+
+### Contract mismatches
+
+#### 1) Missing endpoint wrappers for CLI auth orchestration (MISSING_IN_RUST)
+
+- Python provides direct wrappers for both CLI session creation and retrieval endpoints.
+- Rust has no callable equivalents for either `/api/v3/cli/create-session` or `/api/v3/cli/get-session`.
+
+#### 2) Missing dual-identifier retrieval contract (MISSING_IN_RUST)
+
+- Python `cli.get_session` accepts `id` that can be either UUID session ID or 6-char code.
+- Rust has no typed/query contract for this dual-identifier CLI lookup behavior.
+
+#### 3) Missing CLI session lifecycle field contract (MISSING_IN_RUST)
+
+- Python models explicit lifecycle fields (`code`, `expiresAt`, `status` as `pending|linked`, optional `account` and `api_key`).
+- Rust has no corresponding CLI lifecycle structs or enums.
+
+### Behavior mismatches
+
+#### 1) Command wrappers vs API endpoint wrappers (PARTIAL)
+
+- Python `cli` resource acts as generated API endpoint wrappers that back the Composio CLI authentication workflow.
+- Rust provides no equivalent API wrappers; users must manually issue HTTP calls for CLI login orchestration if needed.
+
+#### 2) CLI-only helper utility gap (MISSING_IN_RUST)
+
+- Python exposes helper-style flows specifically intended for CLI UX (short-code session bootstrap and polling).
+- Rust SDK does not expose this CLI helper domain at all.
+
+#### 3) CLI orchestration vs SDK-level tool/session orchestration divergence (PARTIAL)
+
+- Rust focuses on Tool Router orchestration (`create_session`, `get_session`, `SessionBuilder`, meta-tool execution, auth link creation), which is a different lifecycle than CLI login-session orchestration.
+- Conceptual overlap exists around “session” naming, but operational semantics, endpoint family, and payload contracts differ.
+
+### Response/type drift
+
+#### 1) CLI response models absent in Rust (MISSING_IN_RUST)
+
+- Python defines dedicated CLI models including account sub-model and aliased timestamp fields (`expiresAt`).
+- Rust has no CLI-specific response models.
+
+#### 2) CLI status typing absent in Rust (MISSING_IN_RUST)
+
+- Python constrains status to `pending | linked`.
+- Rust has no equivalent enum/typed state for CLI session linkage lifecycle.
+
+#### 3) API-key handoff payload not represented in Rust (MISSING_IN_RUST)
+
+- Python `CliGetSessionResponse` includes optional `api_key` populated once linked.
+- Rust cannot deserialize or expose this handoff payload in typed form via SDK methods.
+
+### Recommended remediation order for `cli`
+
+1. Add Rust client methods for CLI endpoints:
+   - `create_cli_session()` -> `POST /api/v3/cli/create-session`
+   - `get_cli_session(id_or_code)` -> `GET /api/v3/cli/get-session`
+2. Add typed Rust request/response models for CLI domain:
+   - session create/get response,
+   - linked account structure,
+   - status enum (`pending`, `linked`),
+   - serde alias support for `expiresAt`.
+3. Decide API shape for Rust ergonomics:
+   - keep low-level endpoint wrappers (Python parity),
+   - optionally layer convenience polling helpers on top (Rust-specific enhancement).
+4. Document clearly that Tool Router sessions and CLI login sessions are distinct flows/endpoints to prevent user confusion from naming overlap.
+
+## Executive Summary
+
+This final incremental audit compares all 13 Python `composio_client` resources against the Rust SDK surface and finds that Rust currently has strong coverage in core runtime paths (especially Tool Router sessions, connected accounts, auth configs, files, and parts of tools/toolkits/triggers), but substantial parity gaps remain in generated endpoint-complete domains.
+
+Across all operation-level matrices in this report, 63 capabilities were evaluated:
+- `FULL`: 9
+- `PARTIAL`: 19
+- `MISSING_IN_RUST`: 32
+- `RUST_ONLY`: 3
+
+The largest concentration of missing parity is in domains where Python exposes generated endpoint wrappers and Rust either omits those routes or provides only model scaffolding/convenience abstractions:
+- `mcp` (types exist, endpoint wrappers absent),
+- `project` (project config endpoints and models absent),
+- `cli` (CLI session/auth orchestration endpoints and models absent),
+- `migration` (UUID→NanoId helper endpoint absent).
+
+## Overall Coverage Statistics
+
+### Resource coverage
+
+- Total resources discovered: **13**
+- Resources audited: **13/13**
+- Remaining: **0**
+
+### Capability status distribution (from all parity matrices)
+
+- `FULL`: **9 / 63** (14.3%)
+- `PARTIAL`: **19 / 63** (30.2%)
+- `MISSING_IN_RUST`: **32 / 63** (50.8%)
+- `RUST_ONLY`: **3 / 63** (4.8%)
+
+### High-level interpretation
+
+- Rust is functionally strong for selected workflows but not yet endpoint-complete relative to Python’s generated client.
+- The dominant gap pattern is **missing public operation wrappers** rather than isolated field-level drift.
+- Several Rust-only enhancements (builder ergonomics, safety checks, convenience layers) are beneficial but should be clearly documented as additive behavior relative to Python baseline.
+
+## Consolidated Gap Register
+
+### P0 (critical parity blockers)
+
+1. **MCP operations missing in Rust client** (`create/retrieve/update/list/delete`, `custom`, `generate`, `retrieve_app`).
+2. **Project config domain missing** (`GET/PATCH /api/v3/org/project/config` + typed models).
+3. **CLI domain missing** (`POST /api/v3/cli/create-session`, `GET /api/v3/cli/get-session` + typed models).
+4. **Migration helper missing** (`GET /api/v3/migration/get-nanoid` + typed request/response).
+
+### P1 (major functional drift)
+
+5. Missing enum endpoints in Rust:
+   - tools enum (`/api/v3/tools/enum`),
+   - trigger types enum (`/api/v3/triggers_types/list/enum`).
+6. Trigger/type retrieval parameter gaps:
+   - trigger type retrieve missing `toolkit_versions` support.
+7. Toolkit parity drift:
+   - `get_toolkit` missing optional `version`,
+   - deprecated filter naming mismatch (`include_deprecated` vs `show_deprecated`),
+   - categories schema/metadata drift.
+8. Tools parity drift:
+   - list query naming/coverage mismatch,
+   - get-input payload key mismatch,
+   - proxy missing `binary_body`.
+9. Trigger instances parity drift:
+   - endpoint path divergence (`manage` vs root routes),
+   - response schema coverage differences.
+
+### P2 (quality, consistency, and ergonomics)
+
+10. Naming/alias harmonization across query/body fields to align OpenAPI/Python wire contracts.
+11. Response model enrichment for optional metadata fields (status flags, timestamps, compatibility fields).
+12. Documentation gaps where Rust introduces intentional behavior differences (e.g., version safety checks, builder abstractions).
+13. Integration-test gaps for request serialization and endpoint binding in newly added domains.
+
+## Prioritized Implementation Roadmap
+
+### Phase 1: Endpoint-complete foundation (P0)
+
+1. Implement missing Rust client operation groups for:
+   - `mcp`,
+   - `project.config`,
+   - `cli`,
+   - `migration`.
+2. Add endpoint-bound request/response models for each of the above domains.
+3. Add integration tests for each newly added endpoint wrapper.
+
+### Phase 2: Core contract alignment (P1)
+
+4. Add enum retrieval wrappers for tools and trigger types.
+5. Align tool/toolkit/trigger request parameters with Python/OpenAPI names, with backward-compatible aliases where practical.
+6. Close high-impact schema drifts (`binary_body`, toolkit category shape, trigger/tool status coverage).
+
+### Phase 3: Behavior normalization and documentation (P2)
+
+7. Publish explicit parity notes for Rust-only behavior and convenience abstractions.
+8. Add migration guidance for users moving between Python/Rust SDKs.
+9. Expand conformance tests that compare serialized requests and parsed responses across both SDK contracts.
+
+## Endpoint Coverage Matrix
+
+| Resource | Python endpoint coverage | Rust endpoint coverage | Overall status | Primary gap theme |
+|---|---:|---:|---|---|
+| tools | High (6 ops) | Medium | PARTIAL | Missing enum + query/body contract drift |
+| toolkits | High (3 ops) | Medium | PARTIAL | Missing retrieve version + schema drift |
+| triggers_types | High (3 ops) | Medium | PARTIAL | Missing enum + retrieve query gap |
+| trigger_instances | High (4 ops incl. nested manage) | Medium | PARTIAL | Route-shape and response drift |
+| connected_accounts | High | Medium/High | PARTIAL | Contract/field and behavior drift |
+| auth_configs | High | Medium/High | PARTIAL | Contract/field and behavior drift |
+| files | High | Medium/High | PARTIAL | Contract/field and behavior drift |
+| link | High | Medium/High | PARTIAL | Contract/field and behavior drift |
+| tool_router | High | High (plus Rust conveniences) | PARTIAL | Legacy endpoint + response model drift |
+| mcp | High (8 ops incl. nested) | Low (types only) | MISSING_IN_RUST | Endpoint wrappers absent |
+| migration | Focused (1 op) | None | MISSING_IN_RUST | Endpoint/model absent |
+| project | Focused (2 ops) | None | MISSING_IN_RUST | Endpoint/model absent |
+| cli | Focused (2 ops) | None | MISSING_IN_RUST | Endpoint/model absent |
+
+## Final Recommendations
+
+1. **Prioritize endpoint completeness before deeper ergonomics**: land `mcp`, `project`, `cli`, and `migration` wrappers first so the Rust SDK can match Python’s operational surface.
+2. **Adopt a parity-first contract policy**: default to Python/OpenAPI wire names and add aliases for Rust backward compatibility where needed.
+3. **Keep Rust-only enhancements, but formalize them**: document behavior differences (e.g., Tool Router conveniences, safety checks) as additive and intentional.
+4. **Institutionalize parity validation**: add CI checks that verify endpoint presence and selected request/response schema compatibility against OpenAPI-generated expectations.
+5. **Ship in staged milestones**: P0 endpoint coverage, then P1 contract alignment, then P2 documentation and conformance hardening.
+
 ## Next resource queued
 
-- `project` (next incremental audit pass).
+- None (all 13 discovered resources have now been audited incrementally).
+
+## Global Endpoint Coverage Matrix
+
+| Endpoint | Resource | Python Support | Rust Support | Status | Notes |
+|---|---|---|---|---|---|
+| `/api/v3/tools/{slug}` | tools | yes | yes | FULL | Endpoint aligned for tool retrieval. |
+| `/api/v3/tools` | tools | yes | partial | PARTIAL | List/execute/get-input/proxy families exist but with request/field drift. |
+| `/api/v3/tools/enum` | tools | yes | no | MISSING_IN_RUST | Rust client missing enum wrapper. |
+| `/api/v3/toolkits/{slug}` | toolkits | yes | partial | PARTIAL | Retrieve exists; Rust missing optional `version` query support. |
+| `/api/v3/toolkits` | toolkits | yes | partial | PARTIAL | List exists with deprecated-filter naming drift. |
+| `/api/v3/toolkits/categories` | toolkits | yes | partial | PARTIAL | Categories endpoint exists but response schema parity is partial. |
+| `/api/v3/triggers_types/{slug}` | triggers_types | yes | partial | PARTIAL | Retrieve exists; Rust missing `toolkit_versions` query support. |
+| `/api/v3/triggers_types` | triggers_types | yes | yes | FULL | List endpoint and primary filters are aligned. |
+| `/api/v3/triggers_types/list/enum` | triggers_types | yes | no | MISSING_IN_RUST | Rust client missing enum wrapper. |
+| `/api/v3/trigger_instances/active` | trigger_instances | yes | partial | PARTIAL | Active-list capability exists but contract/shape differences remain. |
+| `/api/v3/trigger_instances` | trigger_instances | yes | partial | PARTIAL | Upsert/create path is partially aligned. |
+| `/api/v3/trigger_instances/manage/{trigger_id}` | trigger_instances | yes | partial | PARTIAL | Python uses nested `manage` update/delete; Rust shape differs. |
+| `/api/v3/connected_accounts` | connected_accounts | yes | partial | PARTIAL | Core list/create/retrieve flows exist with contract drift. |
+| `/api/v3/connected_accounts/{id}` | connected_accounts | yes | yes | FULL | Retrieve is endpoint-aligned. |
+| `/api/v3/connected_accounts/{id}/refresh` | connected_accounts | yes | no | MISSING_IN_RUST | Refresh/reauthorize wrapper missing in Rust. |
+| `/api/v3/connected_accounts/{id}/status` | connected_accounts | yes | no | MISSING_IN_RUST | Status update wrapper missing in Rust. |
+| `/api/v3/connected_accounts/link` | connected_accounts | yes | partial | PARTIAL | Python direct link endpoint exists; Rust uses alternative flows. |
+| `/api/v3/auth_configs` | auth_configs | yes | partial | PARTIAL | List/create initiation flows exist with behavior drift. |
+| `/api/v3/auth_configs/{id}` | auth_configs | yes | no | MISSING_IN_RUST | Retrieve/update/delete wrappers missing in Rust. |
+| `/api/v3/auth_configs/{id}/{status}` | auth_configs | yes | no | MISSING_IN_RUST | Status-in-path endpoint missing in Rust. |
+| `/api/v3/files/list` | files | yes | no | MISSING_IN_RUST | Rust has no direct files list endpoint wrapper. |
+| `/api/v3/files/upload/request` | files | yes | partial | PARTIAL | Rust supports file upload workflows via utility abstractions, not parity wrapper. |
+| `/api/v3/files/upload` | files | yes | partial | PARTIAL | Rust supports upload execution path via helper utilities. |
+| `/api/v3/connected_accounts/link` | link | yes | no | MISSING_IN_RUST | Dedicated `link.create` wrapper missing in Rust. |
+| `/tool_router/session/{session_id}/link` | link | yes | yes | RUST_ONLY | Rust provides session-scoped link flow not exposed via Python `link` resource. |
+| `/api/v3/labs/tool_router/session` | tool_router | yes | no | MISSING_IN_RUST | Legacy labs session creation unsupported in Rust. |
+| `/tool_router/session` | tool_router | yes | yes | FULL | Session creation aligned on Tool Router route family. |
+| `/tool_router/session/{id}` | tool_router | yes | yes | FULL | Session retrieval aligned. |
+| `/tool_router/session/{id}/execute` | tool_router | yes | yes | FULL | Tool execution aligned. |
+| `/tool_router/session/{id}/execute_meta` | tool_router | yes | yes | FULL | Meta-tool execution aligned. |
+| `/tool_router/session/{id}/link` | tool_router | yes | yes | FULL | Session link aligned. |
+| `/tool_router/session/{id}/toolkits` | tool_router | yes | yes | FULL | Toolkit listing aligned. |
+| `/tool_router/session/{id}/tools` | tool_router | yes | partial | PARTIAL | Core endpoint exists; response model richness differs. |
+| `/api/v3/mcp/servers` | mcp | yes | no | MISSING_IN_RUST | MCP CRUD/list wrappers absent in Rust client. |
+| `/api/v3/mcp/{id}` | mcp | yes | no | MISSING_IN_RUST | MCP retrieve/update/delete wrappers absent in Rust client. |
+| `/api/v3/mcp/servers/app` | mcp | yes | no | MISSING_IN_RUST | App-scoped MCP retrieval wrapper missing. |
+| `/api/v3/mcp/servers/generate` | mcp | yes | no | MISSING_IN_RUST | MCP generate endpoint wrapper missing. |
+| `/api/v3/mcp/servers/custom` | mcp | yes | no | MISSING_IN_RUST | MCP custom-create endpoint wrapper missing. |
+| `/api/v3/migration/get-nanoid` | migration | yes | no | MISSING_IN_RUST | Migration helper endpoint absent in Rust. |
+| `/api/v3/org/project/config` | project | yes | no | MISSING_IN_RUST | Project config retrieve/update endpoints absent in Rust. |
+| `/api/v3/cli/create-session` | cli | yes | no | MISSING_IN_RUST | CLI create-session endpoint missing in Rust. |
+| `/api/v3/cli/get-session` | cli | yes | no | MISSING_IN_RUST | CLI get-session endpoint missing in Rust. |
+
+## Resource Coverage Metrics
+
+### `tools`
+- total capabilities: 6
+- FULL: 1
+- PARTIAL: 4
+- MISSING_IN_RUST: 1
+- coverage: 83.3%
+
+### `toolkits`
+- total capabilities: 3
+- FULL: 0
+- PARTIAL: 3
+- MISSING_IN_RUST: 0
+- coverage: 100.0%
+
+### `triggers_types`
+- total capabilities: 3
+- FULL: 1
+- PARTIAL: 1
+- MISSING_IN_RUST: 1
+- coverage: 66.7%
+
+### `trigger_instances`
+- total capabilities: 4
+- FULL: 0
+- PARTIAL: 4
+- MISSING_IN_RUST: 0
+- coverage: 100.0%
+
+### `connected_accounts`
+- total capabilities: 6
+- FULL: 1
+- PARTIAL: 2
+- MISSING_IN_RUST: 3
+- coverage: 50.0%
+
+### `auth_configs`
+- total capabilities: 6
+- FULL: 0
+- PARTIAL: 2
+- MISSING_IN_RUST: 4
+- coverage: 33.3%
+
+### `files`
+- total capabilities: 4
+- FULL: 0
+- PARTIAL: 2
+- MISSING_IN_RUST: 1
+- coverage: 50.0%
+
+### `link`
+- total capabilities: 3
+- FULL: 0
+- PARTIAL: 0
+- MISSING_IN_RUST: 1
+- coverage: 0.0%
+
+### `tool_router`
+- total capabilities: 8
+- FULL: 6
+- PARTIAL: 1
+- MISSING_IN_RUST: 1
+- coverage: 87.5%
+
+### `mcp`
+- total capabilities: 8
+- FULL: 0
+- PARTIAL: 0
+- MISSING_IN_RUST: 8
+- coverage: 0.0%
+
+### `migration`
+- total capabilities: 3
+- FULL: 0
+- PARTIAL: 0
+- MISSING_IN_RUST: 3
+- coverage: 0.0%
+
+### `project`
+- total capabilities: 4
+- FULL: 0
+- PARTIAL: 0
+- MISSING_IN_RUST: 4
+- coverage: 0.0%
+
+### `cli`
+- total capabilities: 5
+- FULL: 0
+- PARTIAL: 0
+- MISSING_IN_RUST: 5
+- coverage: 0.0%
+
+## SDK Parity Heatmap
+
+| Resource | Coverage | Priority |
+|---|---:|---|
+| tools | 83.3% | LOW |
+| toolkits | 100.0% | LOW |
+| triggers_types | 66.7% | MEDIUM |
+| trigger_instances | 100.0% | LOW |
+| connected_accounts | 50.0% | HIGH |
+| auth_configs | 33.3% | HIGH |
+| files | 50.0% | HIGH |
+| link | 0.0% | CRITICAL |
+| tool_router | 87.5% | LOW |
+| mcp | 0.0% | CRITICAL |
+| migration | 0.0% | CRITICAL |
+| project | 0.0% | CRITICAL |
+| cli | 0.0% | CRITICAL |
+
+## Maintainer Action Checklist
+
+- [ ] Implement MCP server CRUD/list wrappers: `GET/POST /api/v3/mcp/servers`, `GET/PATCH/DELETE /api/v3/mcp/{id}`.
+- [ ] Implement MCP helper endpoints: `GET /api/v3/mcp/servers/app`, `POST /api/v3/mcp/servers/generate`, `POST /api/v3/mcp/servers/custom`.
+- [ ] Add CLI session endpoints: `POST /api/v3/cli/create-session`, `GET /api/v3/cli/get-session`.
+- [ ] Add project config endpoints: `GET /api/v3/org/project/config`, `PATCH /api/v3/org/project/config`.
+- [ ] Add migration helper endpoint: `GET /api/v3/migration/get-nanoid`.
+- [ ] Implement tools enum endpoint: `GET /api/v3/tools/enum`.
+- [ ] Implement trigger types enum endpoint: `GET /api/v3/triggers_types/list/enum`.
+- [ ] Extend trigger-type retrieve query coverage: `GET /api/v3/triggers_types/{slug}` with `toolkit_versions` support.
+- [ ] Extend toolkit retrieve query coverage: `GET /api/v3/toolkits/{slug}` with `version` support.
+- [ ] Add connected account lifecycle wrappers: `POST /api/v3/connected_accounts/{id}/refresh`, `PATCH /api/v3/connected_accounts/{id}/status`, `DELETE /api/v3/connected_accounts/{id}`.
+- [ ] Add auth config endpoint wrappers: `GET/PATCH/DELETE /api/v3/auth_configs/{id}`, `PATCH /api/v3/auth_configs/{id}/{status}`.
+- [ ] Add direct link endpoint parity wrapper: `POST /api/v3/connected_accounts/link`.
+- [ ] Add files list wrapper: `GET /api/v3/files/list` and align upload-request parity for `POST /api/v3/files/upload/request`.
+- [ ] Confirm Tool Router legacy endpoint strategy: support or explicitly deprecate `POST /api/v3/labs/tool_router/session` in Rust docs.
