@@ -1458,3 +1458,178 @@ The largest concentration of missing parity is in domains where Python exposes g
 ## Next resource queued
 
 - None (all 13 discovered resources have now been audited incrementally).
+
+## Global Endpoint Coverage Matrix
+
+| Endpoint | Resource | Python Support | Rust Support | Status | Notes |
+|---|---|---|---|---|---|
+| `/api/v3/tools/{slug}` | tools | yes | yes | FULL | Endpoint aligned for tool retrieval. |
+| `/api/v3/tools` | tools | yes | partial | PARTIAL | List/execute/get-input/proxy families exist but with request/field drift. |
+| `/api/v3/tools/enum` | tools | yes | no | MISSING_IN_RUST | Rust client missing enum wrapper. |
+| `/api/v3/toolkits/{slug}` | toolkits | yes | partial | PARTIAL | Retrieve exists; Rust missing optional `version` query support. |
+| `/api/v3/toolkits` | toolkits | yes | partial | PARTIAL | List exists with deprecated-filter naming drift. |
+| `/api/v3/toolkits/categories` | toolkits | yes | partial | PARTIAL | Categories endpoint exists but response schema parity is partial. |
+| `/api/v3/triggers_types/{slug}` | triggers_types | yes | partial | PARTIAL | Retrieve exists; Rust missing `toolkit_versions` query support. |
+| `/api/v3/triggers_types` | triggers_types | yes | yes | FULL | List endpoint and primary filters are aligned. |
+| `/api/v3/triggers_types/list/enum` | triggers_types | yes | no | MISSING_IN_RUST | Rust client missing enum wrapper. |
+| `/api/v3/trigger_instances/active` | trigger_instances | yes | partial | PARTIAL | Active-list capability exists but contract/shape differences remain. |
+| `/api/v3/trigger_instances` | trigger_instances | yes | partial | PARTIAL | Upsert/create path is partially aligned. |
+| `/api/v3/trigger_instances/manage/{trigger_id}` | trigger_instances | yes | partial | PARTIAL | Python uses nested `manage` update/delete; Rust shape differs. |
+| `/api/v3/connected_accounts` | connected_accounts | yes | partial | PARTIAL | Core list/create/retrieve flows exist with contract drift. |
+| `/api/v3/connected_accounts/{id}` | connected_accounts | yes | yes | FULL | Retrieve is endpoint-aligned. |
+| `/api/v3/connected_accounts/{id}/refresh` | connected_accounts | yes | no | MISSING_IN_RUST | Refresh/reauthorize wrapper missing in Rust. |
+| `/api/v3/connected_accounts/{id}/status` | connected_accounts | yes | no | MISSING_IN_RUST | Status update wrapper missing in Rust. |
+| `/api/v3/connected_accounts/link` | connected_accounts | yes | partial | PARTIAL | Python direct link endpoint exists; Rust uses alternative flows. |
+| `/api/v3/auth_configs` | auth_configs | yes | partial | PARTIAL | List/create initiation flows exist with behavior drift. |
+| `/api/v3/auth_configs/{id}` | auth_configs | yes | no | MISSING_IN_RUST | Retrieve/update/delete wrappers missing in Rust. |
+| `/api/v3/auth_configs/{id}/{status}` | auth_configs | yes | no | MISSING_IN_RUST | Status-in-path endpoint missing in Rust. |
+| `/api/v3/files/list` | files | yes | no | MISSING_IN_RUST | Rust has no direct files list endpoint wrapper. |
+| `/api/v3/files/upload/request` | files | yes | partial | PARTIAL | Rust supports file upload workflows via utility abstractions, not parity wrapper. |
+| `/api/v3/files/upload` | files | yes | partial | PARTIAL | Rust supports upload execution path via helper utilities. |
+| `/api/v3/connected_accounts/link` | link | yes | no | MISSING_IN_RUST | Dedicated `link.create` wrapper missing in Rust. |
+| `/tool_router/session/{session_id}/link` | link | yes | yes | RUST_ONLY | Rust provides session-scoped link flow not exposed via Python `link` resource. |
+| `/api/v3/labs/tool_router/session` | tool_router | yes | no | MISSING_IN_RUST | Legacy labs session creation unsupported in Rust. |
+| `/tool_router/session` | tool_router | yes | yes | FULL | Session creation aligned on Tool Router route family. |
+| `/tool_router/session/{id}` | tool_router | yes | yes | FULL | Session retrieval aligned. |
+| `/tool_router/session/{id}/execute` | tool_router | yes | yes | FULL | Tool execution aligned. |
+| `/tool_router/session/{id}/execute_meta` | tool_router | yes | yes | FULL | Meta-tool execution aligned. |
+| `/tool_router/session/{id}/link` | tool_router | yes | yes | FULL | Session link aligned. |
+| `/tool_router/session/{id}/toolkits` | tool_router | yes | yes | FULL | Toolkit listing aligned. |
+| `/tool_router/session/{id}/tools` | tool_router | yes | partial | PARTIAL | Core endpoint exists; response model richness differs. |
+| `/api/v3/mcp/servers` | mcp | yes | no | MISSING_IN_RUST | MCP CRUD/list wrappers absent in Rust client. |
+| `/api/v3/mcp/{id}` | mcp | yes | no | MISSING_IN_RUST | MCP retrieve/update/delete wrappers absent in Rust client. |
+| `/api/v3/mcp/servers/app` | mcp | yes | no | MISSING_IN_RUST | App-scoped MCP retrieval wrapper missing. |
+| `/api/v3/mcp/servers/generate` | mcp | yes | no | MISSING_IN_RUST | MCP generate endpoint wrapper missing. |
+| `/api/v3/mcp/servers/custom` | mcp | yes | no | MISSING_IN_RUST | MCP custom-create endpoint wrapper missing. |
+| `/api/v3/migration/get-nanoid` | migration | yes | no | MISSING_IN_RUST | Migration helper endpoint absent in Rust. |
+| `/api/v3/org/project/config` | project | yes | no | MISSING_IN_RUST | Project config retrieve/update endpoints absent in Rust. |
+| `/api/v3/cli/create-session` | cli | yes | no | MISSING_IN_RUST | CLI create-session endpoint missing in Rust. |
+| `/api/v3/cli/get-session` | cli | yes | no | MISSING_IN_RUST | CLI get-session endpoint missing in Rust. |
+
+## Resource Coverage Metrics
+
+### `tools`
+- total capabilities: 6
+- FULL: 1
+- PARTIAL: 4
+- MISSING_IN_RUST: 1
+- coverage: 83.3%
+
+### `toolkits`
+- total capabilities: 3
+- FULL: 0
+- PARTIAL: 3
+- MISSING_IN_RUST: 0
+- coverage: 100.0%
+
+### `triggers_types`
+- total capabilities: 3
+- FULL: 1
+- PARTIAL: 1
+- MISSING_IN_RUST: 1
+- coverage: 66.7%
+
+### `trigger_instances`
+- total capabilities: 4
+- FULL: 0
+- PARTIAL: 4
+- MISSING_IN_RUST: 0
+- coverage: 100.0%
+
+### `connected_accounts`
+- total capabilities: 6
+- FULL: 1
+- PARTIAL: 2
+- MISSING_IN_RUST: 3
+- coverage: 50.0%
+
+### `auth_configs`
+- total capabilities: 6
+- FULL: 0
+- PARTIAL: 2
+- MISSING_IN_RUST: 4
+- coverage: 33.3%
+
+### `files`
+- total capabilities: 4
+- FULL: 0
+- PARTIAL: 2
+- MISSING_IN_RUST: 1
+- coverage: 50.0%
+
+### `link`
+- total capabilities: 3
+- FULL: 0
+- PARTIAL: 0
+- MISSING_IN_RUST: 1
+- coverage: 0.0%
+
+### `tool_router`
+- total capabilities: 8
+- FULL: 6
+- PARTIAL: 1
+- MISSING_IN_RUST: 1
+- coverage: 87.5%
+
+### `mcp`
+- total capabilities: 8
+- FULL: 0
+- PARTIAL: 0
+- MISSING_IN_RUST: 8
+- coverage: 0.0%
+
+### `migration`
+- total capabilities: 3
+- FULL: 0
+- PARTIAL: 0
+- MISSING_IN_RUST: 3
+- coverage: 0.0%
+
+### `project`
+- total capabilities: 4
+- FULL: 0
+- PARTIAL: 0
+- MISSING_IN_RUST: 4
+- coverage: 0.0%
+
+### `cli`
+- total capabilities: 5
+- FULL: 0
+- PARTIAL: 0
+- MISSING_IN_RUST: 5
+- coverage: 0.0%
+
+## SDK Parity Heatmap
+
+| Resource | Coverage | Priority |
+|---|---:|---|
+| tools | 83.3% | LOW |
+| toolkits | 100.0% | LOW |
+| triggers_types | 66.7% | MEDIUM |
+| trigger_instances | 100.0% | LOW |
+| connected_accounts | 50.0% | HIGH |
+| auth_configs | 33.3% | HIGH |
+| files | 50.0% | HIGH |
+| link | 0.0% | CRITICAL |
+| tool_router | 87.5% | LOW |
+| mcp | 0.0% | CRITICAL |
+| migration | 0.0% | CRITICAL |
+| project | 0.0% | CRITICAL |
+| cli | 0.0% | CRITICAL |
+
+## Maintainer Action Checklist
+
+- [ ] Implement MCP server CRUD/list wrappers: `GET/POST /api/v3/mcp/servers`, `GET/PATCH/DELETE /api/v3/mcp/{id}`.
+- [ ] Implement MCP helper endpoints: `GET /api/v3/mcp/servers/app`, `POST /api/v3/mcp/servers/generate`, `POST /api/v3/mcp/servers/custom`.
+- [ ] Add CLI session endpoints: `POST /api/v3/cli/create-session`, `GET /api/v3/cli/get-session`.
+- [ ] Add project config endpoints: `GET /api/v3/org/project/config`, `PATCH /api/v3/org/project/config`.
+- [ ] Add migration helper endpoint: `GET /api/v3/migration/get-nanoid`.
+- [ ] Implement tools enum endpoint: `GET /api/v3/tools/enum`.
+- [ ] Implement trigger types enum endpoint: `GET /api/v3/triggers_types/list/enum`.
+- [ ] Extend trigger-type retrieve query coverage: `GET /api/v3/triggers_types/{slug}` with `toolkit_versions` support.
+- [ ] Extend toolkit retrieve query coverage: `GET /api/v3/toolkits/{slug}` with `version` support.
+- [ ] Add connected account lifecycle wrappers: `POST /api/v3/connected_accounts/{id}/refresh`, `PATCH /api/v3/connected_accounts/{id}/status`, `DELETE /api/v3/connected_accounts/{id}`.
+- [ ] Add auth config endpoint wrappers: `GET/PATCH/DELETE /api/v3/auth_configs/{id}`, `PATCH /api/v3/auth_configs/{id}/{status}`.
+- [ ] Add direct link endpoint parity wrapper: `POST /api/v3/connected_accounts/link`.
+- [ ] Add files list wrapper: `GET /api/v3/files/list` and align upload-request parity for `POST /api/v3/files/upload/request`.
+- [ ] Confirm Tool Router legacy endpoint strategy: support or explicitly deprecate `POST /api/v3/labs/tool_router/session` in Rust docs.
