@@ -7,6 +7,22 @@ Type-safe, async Rust SDK for Composio’s Tool Router and API v3.
 Composio helps AI apps and agents connect to external services through a unified API.  
 This SDK gives Rust developers a strongly-typed client for sessions, tools, auth flows, MCP servers, files, and trigger-related APIs.
 
+## What's New in v0.3.0
+
+This release significantly expands API parity and lifecycle coverage:
+
+- Added full **MCP server management** support (create/get/update/delete/list/generate/custom).
+- Added **project configuration** endpoints (`get_project_config`, `update_project_config`).
+- Added **CLI session** endpoints (`create_cli_session`, `get_cli_session`).
+- Added **migration helper** endpoint (`get_migration_nanoid`).
+- Added **tools enum** endpoint (`retrieve_tool_enum`).
+- Added **trigger types enum** endpoint (`retrieve_trigger_type_enum`).
+- Added **toolkit retrieve version support** via `get_toolkit_with_params`.
+- Added **connected account lifecycle** endpoints (refresh/status/delete).
+- Added **auth config lifecycle** endpoints (get/update/delete/status update).
+- Added **direct link endpoint parity** (`create_connected_account_link`).
+- Added **files API parity improvements** (`list_files`, `create_file_upload_request`) and aligned file models.
+
 ## Features
 
 - **Tool execution**: list/retrieve/execute/proxy tools and generate tool inputs.
@@ -30,7 +46,7 @@ Or add manually:
 
 ```toml
 [dependencies]
-composio-sdk = "0.2"
+composio-sdk = "0.3"
 tokio = { version = "1", features = ["full"] }
 serde_json = "1"
 ```
