@@ -155,6 +155,14 @@ pub struct ToolkitMeta {
     pub version: Option<String>,
 }
 
+/// Toolkit retrieve parameters
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ToolkitRetrieveParams {
+    /// Optional toolkit version
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
+}
+
 /// Toolkit retrieve response
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolkitRetrieveResponse {
@@ -412,6 +420,16 @@ mod tests {
 
         assert_eq!(field_set.required.len(), 1);
         assert_eq!(field_set.optional.len(), 0);
+    }
+
+    #[test]
+    fn test_toolkit_retrieve_params_serialization() {
+        let params = ToolkitRetrieveParams {
+            version: Some("20250906_01".to_string()),
+        };
+
+        let value = serde_json::to_value(&params).unwrap();
+        assert_eq!(value["version"], "20250906_01");
     }
 
     #[test]

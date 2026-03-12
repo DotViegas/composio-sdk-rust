@@ -29,13 +29,17 @@
 
 pub mod auth_configs;
 pub mod base;
+pub mod cli;
 pub mod connected_accounts;
 pub mod custom_tools;
 pub mod enums;
 pub mod files;
 pub mod internal;
+pub mod link;
 pub mod mcp;
+pub mod migration;
 pub mod modifiers;
+pub mod project;
 pub mod request;
 pub mod response;
 pub mod telemetry;
@@ -100,11 +104,33 @@ pub use auth_configs::DefaultCredentials;
 /// Auth config update response
 pub use auth_configs::AuthConfigUpdateResponse;
 
+/// Auth config status enum
+pub use auth_configs::AuthConfigStatus;
+
 /// Auth config delete response
 pub use auth_configs::AuthConfigDeleteResponse;
 
 /// Auth config status update response
 pub use auth_configs::AuthConfigStatusUpdateResponse;
+
+// ============================================================================
+// CLI
+// ============================================================================
+
+/// CLI session status.
+pub use cli::CliSessionStatus;
+
+/// CLI linked account payload.
+pub use cli::CliLinkedAccount;
+
+/// CLI get-session params.
+pub use cli::CliGetSessionParams;
+
+/// CLI create-session response.
+pub use cli::CliCreateSessionResponse;
+
+/// CLI get-session response.
+pub use cli::CliGetSessionResponse;
 
 // ============================================================================
 // Connected Accounts
@@ -148,6 +174,24 @@ pub use connected_accounts::ConnectedAccountInfo;
 /// Connected account list response
 pub use connected_accounts::ConnectedAccountListResponse;
 
+/// Connected account refresh parameters
+pub use connected_accounts::ConnectedAccountRefreshParams;
+
+/// Connected account refresh response
+pub use connected_accounts::ConnectedAccountRefreshResponse;
+
+/// Connected account update status parameters
+pub use connected_accounts::ConnectedAccountUpdateStatusParams;
+
+/// Connected account delete response
+pub use connected_accounts::ConnectedAccountDeleteResponse;
+
+/// Direct connected account link create params
+pub use link::ConnectedAccountLinkCreateParams;
+
+/// Direct connected account link create response
+pub use link::ConnectedAccountLinkCreateResponse;
+
 /// Connected account update status response
 pub use connected_accounts::ConnectedAccountUpdateStatusResponse;
 
@@ -183,6 +227,9 @@ pub use tools::ToolkitRef;
 
 /// Tool list response
 pub use tools::ToolListResponse;
+
+/// Tool enum response
+pub use tools::ToolRetrieveEnumResponse;
 
 /// Tool proxy parameters
 pub use tools::ToolProxyParams;
@@ -320,8 +367,29 @@ pub use files::FileDownloadable;
 /// File helper for schema processing
 pub use files::FileHelper;
 
+/// File list query parameters.
+pub use files::FileListParams;
+
+/// File list item.
+pub use files::FileListItem;
+
+/// File list response.
+pub use files::FileListResponse;
+
+/// File upload request parameters.
+pub use files::FileCreatePresignedUrlParams;
+
+/// File upload metadata.
+pub use files::FileCreatePresignedUrlMetadata;
+
+/// File storage backend.
+pub use files::FileStorageBackend;
+
 /// File upload response
 pub use files::FileUploadResponse;
+
+/// File upload response alias for endpoint parity.
+pub use files::FileCreatePresignedUrlResponse;
 
 // ============================================================================
 // Internal SDK
@@ -332,6 +400,19 @@ pub use internal::Internal;
 
 /// SDK realtime credentials response
 pub use internal::SDKRealtimeCredentialsResponse;
+
+// ============================================================================
+// Migration
+// ============================================================================
+
+/// Migration resource type for UUID conversion.
+pub use migration::MigrationResourceType;
+
+/// Migration get-nanoid query parameters.
+pub use migration::MigrationGetNanoIdParams;
+
+/// Migration get-nanoid response.
+pub use migration::MigrationGetNanoIdResponse;
 
 // ============================================================================
 // MCP (Model Context Protocol)
@@ -361,6 +442,12 @@ pub use mcp::MCPDeleteResponse;
 /// MCP generate URL response
 pub use mcp::MCPGenerateUrlResponse;
 
+/// MCP app-scoped list response
+pub use mcp::MCPRetrieveAppResponse;
+
+/// MCP custom create response
+pub use mcp::MCPCustomCreateResponse;
+
 /// MCP create parameters
 pub use mcp::MCPCreateParams;
 
@@ -372,6 +459,25 @@ pub use mcp::MCPListParams;
 
 /// MCP generate URL parameters
 pub use mcp::MCPGenerateUrlParams;
+
+/// MCP custom create parameters
+pub use mcp::MCPCustomCreateParams;
+
+/// MCP app-scoped list query parameters
+pub use mcp::MCPRetrieveAppParams;
+
+// ============================================================================
+// Project
+// ============================================================================
+
+/// Project log visibility setting
+pub use project::ProjectLogVisibilitySetting;
+
+/// Project config response
+pub use project::ProjectConfigResponse;
+
+/// Project config update parameters
+pub use project::ProjectConfigUpdateParams;
 
 // ============================================================================
 // Enums
@@ -487,7 +593,7 @@ pub use toolkits::ToolkitItem as ToolkitInfo;
 /// Metadata about a toolkit
 pub use toolkits::ToolkitMeta;
 
-// Note: ConnectedAccountInfo, ConnectedAccountListResponse, and 
+// Note: ConnectedAccountInfo, ConnectedAccountListResponse, and
 // ConnectedAccountUpdateStatusResponse are now exported from connected_accounts module
 
 /// Response from creating an auth link
@@ -547,7 +653,8 @@ pub use triggers::{
     TriggerConnectedAccount, TriggerCreateParams, TriggerCreateResponse, TriggerEvent,
     TriggerInstance, TriggerInstanceListParams, TriggerInstanceListResponse, TriggerMetadata,
     TriggerToolkitRef, TriggerType, TriggerTypeListParams, TriggerTypeListResponse,
-    VerifyWebhookResult, WebhookVerifyParams, WebhookVersion,
+    TriggerTypeRetrieveEnumResponse, TriggerTypeRetrieveParams, VerifyWebhookResult,
+    WebhookVerifyParams, WebhookVersion,
 };
 
 // ============================================================================
@@ -604,6 +711,9 @@ pub use toolkits::ManagedBy;
 
 /// Toolkit retrieve response
 pub use toolkits::ToolkitRetrieveResponse;
+
+/// Toolkit retrieve parameters
+pub use toolkits::ToolkitRetrieveParams;
 
 /// Authentication configuration detail
 pub use toolkits::AuthConfigDetail;

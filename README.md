@@ -1,540 +1,249 @@
 # Composio Rust SDK
 
-> A minimal, type-safe Rust SDK for integrating AI agents with 1000+ external services through the Composio platform.
+Type-safe, async Rust SDK for Composio’s Tool Router and API v3.
 
-[![Crates.io](https://img.shields.io/crates/v/composio-sdk.svg)](https://crates.io/crates/composio-sdk)
-[![Documentation](https://docs.rs/composio-sdk/badge.svg)](https://docs.rs/composio-sdk)
-[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE)
-[![Rust Version](https://img.shields.io/badge/rust-1.70%2B-blue.svg)](https://www.rust-lang.org)
-[![GitHub](https://img.shields.io/badge/github-DotViegas%2Fcomposio--sdk--rust-blue)](https://github.com/DotViegas/composio-sdk-rust)
+## Overview
 
-## What is Composio?
+Composio helps AI apps and agents connect to external services through a unified API.  
+This SDK gives Rust developers a strongly-typed client for sessions, tools, auth flows, MCP servers, files, and trigger-related APIs.
 
-Composio is a platform that connects AI agents to external services like GitHub, Gmail, Slack, and 1000+ other applications. Instead of building integrations for each service yourself, Composio provides:
+## What's New in v0.3.0
 
-- **Universal API**: One SDK to access all services
-- **Authentication Management**: OAuth, API keys, and other auth methods handled automatically
-- **Tool Discovery**: AI agents can discover and use tools at runtime
-- **Sandboxed Execution**: Safe environment for running code and commands
-- **Event Triggers**: React to events from connected services
+This release significantly expands API parity and lifecycle coverage:
 
-Think of it as a "universal adapter" that lets your AI agent interact with any external service through a consistent interface.
+- Added full **MCP server management** support (create/get/update/delete/list/generate/custom).
+- Added **project configuration** endpoints (`get_project_config`, `update_project_config`).
+- Added **CLI session** endpoints (`create_cli_session`, `get_cli_session`).
+- Added **migration helper** endpoint (`get_migration_nanoid`).
+- Added **tools enum** endpoint (`retrieve_tool_enum`).
+- Added **trigger types enum** endpoint (`retrieve_trigger_type_enum`).
+- Added **toolkit retrieve version support** via `get_toolkit_with_params`.
+- Added **connected account lifecycle** endpoints (refresh/status/delete).
+- Added **auth config lifecycle** endpoints (get/update/delete/status update).
+- Added **direct link endpoint parity** (`create_connected_account_link`).
+- Added **files API parity improvements** (`list_files`, `create_file_upload_request`) and aligned file models.
 
-## Why This SDK?
+## Features
 
-This is a **pure Rust implementation** of the Composio SDK, designed for:
+- **Tool execution**: list/retrieve/execute/proxy tools and generate tool inputs.
+- **Tool Router sessions**: create per-user sessions and execute tools in session context.
+- **MCP servers**: create, list, retrieve, update, delete, and generate MCP server URLs.
+- **Connected accounts**: list/retrieve/link/refresh/update-status/delete connected accounts.
+- **Auth configs**: list/create/retrieve/update/delete auth configs and update status.
+- **Files**: list files, request upload URLs, and use upload/download helper abstractions.
+- **CLI sessions**: create and retrieve CLI authentication sessions.
+- **Migration helper**: convert legacy UUIDs to NanoIDs.
+- **Project config**: retrieve and update project-level configuration.
+- **Triggers**: list/retrieve trigger types, retrieve trigger enums, and work with trigger instances.
 
-- **Performance**: Native async/await with Tokio, minimal memory footprint (~2 MB)
-- **Type Safety**: Compile-time guarantees with Rust's type system
-- **Reliability**: Automatic retries, comprehensive error handling
-- **Self-Contained**: All dependencies bundled, no external setup required
-- **Production Ready**: Built for real-world applications with proper error handling and logging
+## Installation
 
-## How It Works
-
-### The Big Picture
-
-![Composio SDK Architecture](architecture.png)
-
-The architecture shows how your AI agent interacts with external services through the Composio SDK:
-
-1. **Your AI Agent** uses the Composio Rust SDK
-2. **SDK Components** provide sessions, meta tools, and wizard guidance
-3. **Composio Platform** handles authentication and routing
-4. **External Services** (GitHub, Gmail, Slack, 1000+ apps) are accessed through a unified interface
-
-### Core Concepts
-
-#### 1. Sessions (User Isolation)
-
-Every user gets their own session. This ensures:
-- User A's GitHub credentials don't mix with User B's
-- Each user can connect different accounts (work email vs personal email)
-- Tools execute with the correct user's permissions
-
-```rust
-// Create a session for a specific user
-let session = client
-    .create_session("user_123")
-    .toolkits(vec!["github", "gmail"])
-    .send()
-    .await?;
+```bash
+cargo add composio-sdk
 ```
 
-#### 2. Meta Tools (Runtime Discovery)
-
-Instead of hardcoding which tools your agent can use, meta tools let the agent discover and use tools dynamically:
-
-- **COMPOSIO_SEARCH_TOOLS**: "Find me tools to send emails"
-- **COMPOSIO_MANAGE_CONNECTIONS**: "Connect my Gmail account"
-- **COMPOSIO_MULTI_EXECUTE_TOOL**: "Run these 5 tools in parallel"
-- **COMPOSIO_REMOTE_WORKBENCH**: "Run this Python code in a sandbox"
-- **COMPOSIO_REMOTE_BASH_TOOL**: "Execute this bash command safely"
-
-This is powerful because your agent can adapt to new tasks without code changes.
-
-#### 3. Native Rust Meta Tools
-
-We've implemented 4 of the 5 meta tools in **pure Rust** (no Python dependencies):
-
-```rust
-use composio_sdk::meta_tools::*;
-
-// Search for tools
-let search = ToolSearch::new(Arc::new(client));
-let tools = search.search("send email", &session_id).await?;
-
-// Execute multiple tools in parallel
-let executor = MultiExecutor::new(Arc::new(client));
-let results = executor.execute_parallel(&session_id, tool_calls).await?;
-
-// Manage OAuth connections
-let manager = ConnectionManager::new(Arc::new(client));
-let is_connected = manager.is_connected(&session_id, "github").await?;
-
-// Execute bash commands
-let bash = BashExecutor::new();
-let result = bash.execute("ls -la").await?;
-```
-
-Only the Workbench uses remote Python execution (by design, for data processing).
-
-#### 4. Wizard Instructions (AI Guidance)
-
-The SDK includes bundled "Skills" - best practices and patterns for using Composio effectively. The wizard module generates instructions for AI agents:
-
-```rust
-use composio_sdk::wizard::generate_wizard_instructions;
-
-// Generate instructions for GitHub integration
-let instructions = generate_wizard_instructions(Some("github"))?;
-
-// Your AI agent reads these instructions to learn:
-// - How to create sessions correctly
-// - How to handle authentication
-// - Common pitfalls to avoid
-// - Toolkit-specific best practices
-```
-
-This helps AI agents use Composio correctly without trial and error.
-
-## Architecture
-
-### Module Structure
-
-```
-composio-sdk/
-├── src/
-│   ├── client.rs           # HTTP client, API communication
-│   ├── session.rs          # Session management
-│   ├── config.rs           # Configuration
-│   ├── error.rs            # Error types
-│   ├── retry.rs            # Retry logic with exponential backoff
-│   │
-│   ├── models/             # Data structures
-│   │   ├── request.rs      # API request types
-│   │   ├── response.rs     # API response types
-│   │   └── enums.rs        # Enumerations
-│   │
-│   ├── meta_tools/         # Native Rust implementations
-│   │   ├── search.rs       # Tool discovery
-│   │   ├── multi_executor.rs  # Parallel execution
-│   │   ├── connections.rs  # OAuth management
-│   │   ├── bash.rs         # Command execution
-│   │   └── workbench.rs    # Python sandbox (hybrid)
-│   │
-│   └── wizard/             # AI guidance system
-│       ├── skills.rs       # Skills extraction
-│       ├── generator.rs    # Instruction generation
-│       └── validator.rs    # Pattern validation
-│
-└── skills/                 # Bundled best practices (33 files)
-    ├── AGENTS.md           # Consolidated reference
-    ├── SKILL.md            # Metadata
-    └── rules/              # 31 rule files
-```
-
-### Data Flow
-
-```
-1. Your Code
-   ↓
-2. ComposioClient (HTTP client with retry logic)
-   ↓
-3. Session (user-scoped context)
-   ↓
-4. Meta Tools (discovery, execution, auth)
-   ↓
-5. Composio API (backend.composio.dev)
-   ↓
-6. External Services (GitHub, Gmail, etc.)
-```
-
-### Key Design Decisions
-
-**Why Sessions?**
-- Isolates users from each other
-- Manages authentication per user
-- Provides consistent context for tool execution
-
-**Why Meta Tools?**
-- Enables runtime tool discovery
-- Reduces context window usage (only 5 tools vs 1000+)
-- Allows agents to adapt to new tasks
-
-**Why Native Rust?**
-- Better performance (no Python overhead)
-- Easier deployment (single binary)
-- Type safety at compile time
-- Smaller memory footprint
-
-**Why Bundled Skills?**
-- No external dependencies
-- Always available at compile time
-- Consistent behavior across installations
-- Helps AI agents learn best practices
-
-## Quick Start
-
-### Installation
+Or add manually:
 
 ```toml
 [dependencies]
-composio-sdk = "0.1.0"
-tokio = { version = "1.0", features = ["full"] }
+composio-sdk = "0.3"
+tokio = { version = "1", features = ["full"] }
+serde_json = "1"
 ```
 
-### Basic Usage
+## Quick Start
+
+Minimal end-to-end flow:
 
 ```rust
-use composio_sdk::{ComposioClient, ComposioError};
+use composio_sdk::client::ComposioClient;
 
 #[tokio::main]
-async fn main() -> Result<(), ComposioError> {
-    // 1. Create client
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = ComposioClient::builder()
         .api_key(std::env::var("COMPOSIO_API_KEY")?)
         .build()?;
 
-    // 2. Create session for a user
-    let session = client
-        .create_session("user_123")
-        .toolkits(vec!["github", "gmail"])
-        .send()
-        .await?;
-
-    // 3. Execute a tool
-    let result = session
-        .execute_tool(
-            "GITHUB_CREATE_ISSUE",
-            serde_json::json!({
-                "owner": "composio",
-                "repo": "composio",
-                "title": "Test issue",
-                "body": "Created via Rust SDK"
-            })
-        )
-        .await?;
-
-    println!("Issue created: {:?}", result.data);
-    Ok(())
-}
-```
-
-### With Meta Tools
-
-```rust
-use composio_sdk::meta_tools::ToolSearch;
-use std::sync::Arc;
-
-// Let the agent discover tools at runtime
-let search = ToolSearch::new(Arc::new(client));
-let tools = search.search("create GitHub issue", &session_id).await?;
-
-// Agent now knows which tools to use
-for tool in tools {
-    println!("Found: {} - {}", tool.slug, tool.description);
-}
-```
-
-### With Wizard Instructions
-
-```rust
-use composio_sdk::wizard::generate_wizard_instructions;
-
-// Generate instructions for your AI agent
-let instructions = generate_wizard_instructions(Some("github"))?;
-
-// Feed these instructions to your AI agent
-// The agent learns best practices automatically
-```
-
-## Real-World Example
-
-Here's how you might build a GitHub automation agent:
-
-```rust
-use composio_sdk::{ComposioClient, meta_tools::*};
-use std::sync::Arc;
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Setup
-    let client = Arc::new(ComposioClient::builder()
-        .api_key(std::env::var("COMPOSIO_API_KEY")?)
-        .build()?);
-    
+    // 1) Create a user-scoped Tool Router session
     let session = client
         .create_session("user_123")
         .toolkits(vec!["github"])
         .send()
         .await?;
-    
-    let session_id = session.session_id();
-    
-    // 1. Check if GitHub is connected
-    let conn_manager = ConnectionManager::new(client.clone());
-    if !conn_manager.is_connected(session_id, "github").await? {
-        // Create auth link for user
-        let link = conn_manager.create_auth_link(
-            session_id,
-            "github",
-            Some("https://myapp.com/callback")
-        ).await?;
-        
-        println!("Please connect GitHub: {}", link.redirect_url);
-        return Ok(());
-    }
-    
-    // 2. Search for relevant tools
-    let search = ToolSearch::new(client.clone());
-    let tools = search.search("list GitHub repositories", session_id).await?;
-    
-    println!("Agent can use these tools:");
-    for tool in &tools {
-        println!("  - {}: {}", tool.slug, tool.name);
-    }
-    
-    // 3. Execute tools in parallel
-    let executor = MultiExecutor::new(client.clone());
-    let tool_calls = vec![
-        ToolCall {
-            tool_slug: "GITHUB_GET_REPOS".to_string(),
-            arguments: serde_json::json!({ "owner": "composio" }),
-            connected_account_id: None,
-        },
-        ToolCall {
-            tool_slug: "GITHUB_GET_ISSUES".to_string(),
-            arguments: serde_json::json!({ 
-                "owner": "composio", 
-                "repo": "composio" 
+
+    // 2) Execute a tool via that session
+    let result = session
+        .execute_tool(
+            "GITHUB_CREATE_ISSUE",
+            serde_json::json!({
+                "owner": "acme",
+                "repo": "demo",
+                "title": "Issue from Rust SDK"
             }),
-            connected_account_id: None,
-        },
-    ];
-    
-    let results = executor.execute_parallel(session_id, tool_calls).await?;
-    println!("Executed {} tools successfully", results.successful);
-    
+        )
+        .await?;
+
+    println!("success: {}", result.successful);
     Ok(())
 }
 ```
 
-## Features
+## Authentication
 
-### Core Features
-- ✅ Session management with user isolation
-- ✅ Tool execution (regular and meta tools)
-- ✅ Toolkit listing and filtering
-- ✅ Authentication link creation
-- ✅ Automatic retry with exponential backoff
-- ✅ Comprehensive error handling
-
-### Native Rust Meta Tools
-- ✅ Tool search and discovery
-- ✅ Multi-tool parallel execution
-- ✅ Connection management (OAuth)
-- ✅ Bash command execution
-- ✅ Workbench (hybrid: Rust wrapper + remote Python)
-
-### Wizard System
-- ✅ Bundled Skills content (33 files)
-- ✅ Instruction generation for AI agents
-- ✅ Pattern validation
-- ✅ Toolkit-specific guidance
-
-### Performance
-- ✅ ~2 MB memory footprint
-- ✅ Async/await with Tokio
-- ✅ Zero-copy deserialization where possible
-- ✅ Efficient Arc-based sharing
-
-## Configuration
-
-Customize client behavior:
+Use your Composio API key (sent as `x-api-key`):
 
 ```rust
-use std::time::Duration;
-
-let client = ComposioClient::builder()
-    .api_key("your-api-key")
-    .base_url("https://backend.composio.dev/api/v3")
-    .timeout(Duration::from_secs(30))
-    .max_retries(3)
-    .initial_retry_delay(Duration::from_secs(1))
-    .max_retry_delay(Duration::from_secs(10))
+let client = composio_sdk::client::ComposioClient::builder()
+    .api_key(std::env::var("COMPOSIO_API_KEY")?)
     .build()?;
 ```
 
-## Authentication Patterns
+## Core Concepts
 
-### In-Chat Authentication (Default)
+### Tools
+Use `list_tools`, `get_tool`, `execute_tool`, `generate_tool_inputs`, `proxy_tool`, and `retrieve_tool_enum`.
 
-The agent automatically prompts users when authentication is needed:
+### Tool Router
+Create sessions with `create_session(...).send()`, then execute tools and meta tools per user context.
 
-```rust
-let session = client
-    .create_session("user_123")
-    .manage_connections(true)  // Default
-    .send()
-    .await?;
+### MCP Servers
+Use `create_mcp_server`, `list_mcp_servers`, `get_mcp_server`, `update_mcp_server`, `delete_mcp_server`, `generate_mcp_server`, and related methods.
 
-// Agent will automatically handle auth when needed
-```
+### Connected Accounts
+Use `list_connected_accounts`, `get_connected_account`, `create_connected_account_link`, `refresh_connected_account`, `update_connected_account_status`, and `delete_connected_account`.
 
-### Manual Authentication
+### Auth Configs
+Use `list_auth_configs`, `create_auth_config`, `get_auth_config`, `update_auth_config`, `delete_auth_config`, and `update_auth_config_status`.
 
-Pre-authenticate users during onboarding:
+### Files
+Use endpoint wrappers (`list_files`, `create_file_upload_request`) or helper abstractions (`FileUploadable`, `FileDownloadable`, `FileHelper`).
 
-```rust
-// Create auth link
-let link = session
-    .create_auth_link("github", Some("https://yourapp.com/callback"))
-    .await?;
+### CLI Sessions
+Use `create_cli_session` and `get_cli_session` for CLI auth workflows.
 
-println!("Redirect user to: {}", link.redirect_url);
+### Migration
+Use `get_migration_nanoid` for UUID → NanoID migration lookups.
 
-// Wait for connection
-link.wait_for_connection(Duration::from_secs(300)).await?;
-```
-
-## Error Handling
-
-The SDK provides detailed error information:
-
-```rust
-use composio_sdk::ComposioError;
-
-match session.execute_tool("INVALID_TOOL", serde_json::json!({})).await {
-    Ok(result) => println!("Success: {:?}", result),
-    Err(ComposioError::ApiError { status, message, suggested_fix, .. }) => {
-        eprintln!("API error ({}): {}", status, message);
-        if let Some(fix) = suggested_fix {
-            eprintln!("Suggested fix: {}", fix);
-        }
-    }
-    Err(ComposioError::NetworkError(e)) => {
-        eprintln!("Network error: {}", e);
-    }
-    Err(e) => {
-        eprintln!("Other error: {}", e);
-    }
-}
-```
+### Project Config
+Use `get_project_config` and `update_project_config` for project-level settings.
 
 ## Examples
 
-The SDK includes comprehensive examples:
+### Execute a tool (client-level)
 
-```bash
-# Basic usage
-cargo run --example basic_usage
+```rust
+use composio_sdk::models::tools::ToolExecuteParams;
+use std::collections::HashMap;
 
-# Authentication flows
-cargo run --example authentication
+let mut arguments = HashMap::new();
+arguments.insert("owner".to_string(), serde_json::json!("acme"));
+arguments.insert("repo".to_string(), serde_json::json!("demo"));
+arguments.insert("title".to_string(), serde_json::json!("Issue from SDK"));
 
-# Meta tools
-cargo run --example meta_tools_usage
-
-# Wizard instructions
-cargo run --example wizard_instructions
-
-# Tool execution
-cargo run --example tool_execution
+let response = client
+    .execute_tool(ToolExecuteParams {
+        slug: "GITHUB_CREATE_ISSUE".to_string(),
+        arguments,
+        user_id: Some("user_123".to_string()),
+        ..Default::default()
+    })
+    .await?;
 ```
 
-See the [`examples/`](examples/) directory for complete working examples.
+### Create an MCP server
 
-## Documentation
+```rust
+use composio_sdk::models::mcp::MCPCreateParams;
 
-- **API Docs**: [docs.rs/composio-sdk](https://docs.rs/composio-sdk)
-- **Composio Platform**: [docs.composio.dev](https://docs.composio.dev)
-- **Meta Tools Guide**: [README_META_TOOLS.md](README_META_TOOLS.md)
-- **Wizard System**: [WIZARD_INSTRUCTIONS.md](WIZARD_INSTRUCTIONS.md)
-- **Skills Documentation**: [SKILLS_BUNDLED.md](SKILLS_BUNDLED.md)
-
-## Requirements
-
-- Rust 1.70 or later
-- Tokio runtime
-- Composio API key ([get one here](https://app.composio.dev))
-
-## Performance
-
-The SDK is optimized for production use:
-
-- **Library size**: 2.45 MB (release build)
-- **Runtime overhead**: 112 bytes (client) + 296 bytes (session builder)
-- **Initialization time**: ~200 µs (client creation)
-- **Memory footprint**: Minimal, suitable for resource-constrained environments
-
-See [MEMORY_FOOTPRINT_REPORT.md](MEMORY_FOOTPRINT_REPORT.md) for detailed analysis.
-
-## Development
-
-```bash
-# Clone the repository
-git clone https://github.com/DotViegas/composio-sdk-rust.git
-cd composio-sdk-rust/composio-sdk
-
-# Set your API key
-export COMPOSIO_API_KEY="your_api_key_here"
-
-# Run tests
-cargo test
-
-# Run examples
-cargo run --example basic_usage
-
-# Build documentation
-cargo doc --open
+let mcp = client
+    .create_mcp_server(MCPCreateParams {
+        name: "my-mcp".to_string(),
+        auth_config_ids: vec!["ac_123".to_string()],
+        allowed_tools: None,
+        no_auth_apps: None,
+        toolkits: None,
+        custom_tools: None,
+        managed_auth_via_composio: Some(false),
+    })
+    .await?;
 ```
 
-See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development guide.
+### List connected accounts
+
+```rust
+use composio_sdk::models::connected_accounts::ConnectedAccountListParams;
+
+let accounts = client
+    .list_connected_accounts(ConnectedAccountListParams {
+        user_ids: Some(vec!["user_123".to_string()]),
+        ..Default::default()
+    })
+    .await?;
+```
+
+### Upload a file (helper flow)
+
+```rust
+use composio_sdk::models::files::FileUploadable;
+use std::path::Path;
+
+let uploaded = FileUploadable::from_path(
+    &client,
+    Path::new("./invoice.pdf"),
+    "GMAIL_SEND_EMAIL",
+    "gmail",
+)
+.await?;
+
+println!("s3 key: {}", uploaded.s3key);
+```
+
+### Create a CLI session
+
+```rust
+let cli = client.create_cli_session().await?;
+println!("session code: {}", cli.code);
+```
+
+## Architecture
+
+- `src/client.rs`: API methods and HTTP orchestration.
+- `src/models/`: typed request/response models by domain.
+- `src/session.rs`: Tool Router session abstraction.
+- `src/meta_tools/`: Rust-native meta tool helpers.
+
+## Error Handling
+
+Most APIs return `Result<T, ComposioError>`.
+
+```rust
+match client.create_cli_session().await {
+    Ok(session) => println!("code={}", session.code),
+    Err(err) => eprintln!("request failed: {err}"),
+}
+```
 
 ## Contributing
 
-Contributions are welcome! Please see [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines.
+1. Keep changes focused by domain.
+2. Add/adjust serialization + deserialization tests for model changes.
+3. Run:
+   - `cargo fmt --all`
+   - `cargo test`
+   - `cargo check`
+4. Keep parity work aligned with `COMPOSIO_CLIENT_AUDIT_REPORT.md`.
+
+## Roadmap
+
+Major parity gaps have been closed (MCP, CLI, migration, project config, connected-account lifecycle, auth-config lifecycle, direct link endpoint, files list/upload-request, tool/trigger enums, toolkit retrieve version params).
+
+Remaining work is mainly contract-shape refinement in partially covered domains tracked in `COMPOSIO_CLIENT_AUDIT_REPORT.md`.
 
 ## License
 
-Licensed under either of:
+Licensed under either:
 
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+- MIT
+- Apache-2.0
 
 at your option.
-
-## Support
-
-- [GitHub Issues](https://github.com/DotViegas/composio-sdk-rust/issues)
-- [Discord Community](https://discord.gg/composio) (Composio Platform)
-- [Documentation](https://docs.composio.dev) (Composio Platform)
-
-## Acknowledgments
-
-This SDK was created by [DotViegas](https://github.com/DotViegas) for [ZeroClaw](https://github.com/zeroclaw), a lightweight Rust AI assistant. It follows the design patterns from the official [Composio Python SDK](https://github.com/ComposioHQ/composio) while providing native Rust implementations for better performance and type safety.
-
----
-
-**Made with ❤️ for the Rust community**
