@@ -1,6 +1,6 @@
 [package]
 name = "composio-sdk"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["DotViegas <https://github.com/DotViegas>"]
 description = "Minimal Rust SDK for Composio Tool Router REST API"
