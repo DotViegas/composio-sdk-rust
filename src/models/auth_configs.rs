@@ -8,6 +8,26 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Auth config status used for update-status path operations
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum AuthConfigStatus {
+    /// Enable auth config
+    Enabled,
+    /// Disable auth config
+    Disabled,
+}
+
+impl AuthConfigStatus {
+    /// Return wire-format path segment value.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Enabled => "ENABLED",
+            Self::Disabled => "DISABLED",
+        }
+    }
+}
+
 /// Authentication configuration list parameters
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AuthConfigListParams {
@@ -336,6 +356,37 @@ mod tests {
         let json = serde_json::to_string(&options).unwrap();
         assert!(json.contains("custom"));
         assert!(json.contains("OAUTH2"));
+    }
+
+    #[test]
+    fn test_auth_config_status_serialization() {
+        let enabled = AuthConfigStatus::Enabled;
+        let json = serde_json::to_string(&enabled).unwrap();
+        assert_eq!(json, "\"ENABLED\"");
+        assert_eq!(enabled.as_str(), "ENABLED");
+    }
+
+    #[test]
+    fn test_auth_config_update_response_deserialization() {
+        let payload = r#"{"success":true}"#;
+        let response: AuthConfigUpdateResponse = serde_json::from_str(payload).unwrap();
+        assert!(response.success);
+    }
+
+    #[test]
+    fn test_auth_config_delete_response_deserialization() {
+        let payload = r#"{"success":true,"message":"deleted"}"#;
+        let response: AuthConfigDeleteResponse = serde_json::from_str(payload).unwrap();
+        assert!(response.success);
+        assert_eq!(response.message.as_deref(), Some("deleted"));
+    }
+
+    #[test]
+    fn test_auth_config_status_update_response_deserialization() {
+        let payload = r#"{"success":true,"status":"DISABLED"}"#;
+        let response: AuthConfigStatusUpdateResponse = serde_json::from_str(payload).unwrap();
+        assert!(response.success);
+        assert_eq!(response.status, "DISABLED");
     }
 
     #[test]
